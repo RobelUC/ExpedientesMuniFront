@@ -2,7 +2,7 @@
 
 **Ingreso y cruce de anexos:** campos protegidos por defecto, vista original explícita, exportación protegida, alertas de DNI/RUC contradictorios y descarga de segmentos PDF reales. [Alcance, privacidad y pruebas](https://github.com/PGTEV/Back-End-TP/blob/codex/pmv-hu01-hu04/docs/PMV_INGRESO_PRIVACIDAD_AUDITORIA.md). Esta ampliación no necesita API key.
 
-**Modo universitario:** con ACADEMIC_DEMO=true en el backend, el portal anuncia DEMO UNIVERSITARIA, ofrece ocho PDFs ficticios para descargar, auditoría automática de práctica, modelo sintético y emisión simulada. [Guion y fuente TUPA verificada](https://github.com/PGTEV/Back-End-TP/blob/codex/pmv-hu01-hu04/docs/DEMO_UNIVERSITARIA.md). No requiere claves externas ni constituye una integración municipal real.
+**Modo universitario:** con ACADEMIC_DEMO=true en el backend, el portal ofrece ocho PDFs ficticios para descargar, auditoría automática de práctica, modelo sintético y emisión simulada. Las acciones y los comprobantes identifican las simulaciones, sin banners globales repetidos. [Guion y fuente TUPA verificada](https://github.com/PGTEV/Back-End-TP/blob/codex/pmv-hu01-hu04/docs/DEMO_UNIVERSITARIA.md). No requiere claves externas ni constituye una integración municipal real.
 
 Se conserva React/TypeScript y la separación dominio → puertos → casos de uso → adaptadores. La composición real usa `ApiExpedienteAdapter`, `ApiAuthAdapter` y `ApiTupaAdapter`; los adaptadores de demostración siguen disponibles en el código y no se incluyen en la composición real. Se conservan estilos y estructura del portal.
 

@@ -138,7 +138,7 @@ describe('Demostración universitaria explícita', () => {
       notificacion: { estado: 'ENTREGADA_BUZON_DEMO', destinatario: 'ciudadano-demo@example.invalid', envio_real: false },
     }] });
     const user = await open();
-    expect(screen.getByText(/DEMO UNIVERSITARIA:/)).toBeTruthy();
+    expect(screen.queryByText(/DEMO UNIVERSITARIA:/)).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Auditar automáticamente (demostración)' }));
     await waitFor(() => expect(repository.validate).toHaveBeenCalledWith('id-prueba', 'TUPA-1', 1, {}));
     await waitFor(() => expect(disabled('Aprobar y Firmar (simulación)')).toBe(false));
