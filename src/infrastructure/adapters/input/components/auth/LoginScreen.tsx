@@ -40,10 +40,11 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-surface-container-lowest py-8 px-6 shadow-sm rounded-2xl border border-surface-container">
+          <p className="text-body-sm text-on-surface-variant mb-4">Acceso de prototipo mediante credencial de evaluador. El token solo se conserva en memoria; el alias no cambia la identidad auditada por el servidor.</p>
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label className="block font-label-md text-label-md text-on-surface mb-1">
-                Usuario / DNI
+                Nombre para mostrar
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -55,14 +56,15 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="block w-full pl-10 pr-3 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-body-md text-body-md transition-colors"
-                  placeholder="Ej. admin"
+                  placeholder="Nombre del evaluador (alias visual)"
+                  autoComplete="off"
                 />
               </div>
             </div>
 
             <div>
               <label className="block font-label-md text-label-md text-on-surface mb-1">
-                Contraseña
+                Token de evaluador
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -70,6 +72,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                 </div>
                 <input
                   type="password"
+                  autoComplete="off"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

@@ -1,0 +1,368 @@
+From d359ee5f71c6d2796e319d461ddf3ab73c37f9ab Mon Sep 17 00:00:00 2001
+From: RobelUC <73531878@continental.edu.pe>
+Date: Wed, 4 Nov 2026 20:46:59 -0500
+Subject: [PATCH] fix: protect dossier API and verify React integration
+ contracts
+
+---
+ .env.example                                  |  2 +
+ DEPLOYMENT.md                                 | 69 +++++++++++++++
+ README.md                                     |  2 +
+ .../adapters/input/municipal.py               | 20 ++---
+ src/infrastructure/adapters/input/security.py | 20 +++++
+ src/infrastructure/main.py                    |  6 +-
+ src/infrastructure/settings.py                |  2 +
+ tests/support_frontend_server.py              | 31 +++++++
+ tests/test_frontend_contract.py               | 83 +++++++++++++++++++
+ 9 files changed, 220 insertions(+), 15 deletions(-)
+ create mode 100644 DEPLOYMENT.md
+ create mode 100644 src/infrastructure/adapters/input/security.py
+ create mode 100644 tests/support_frontend_server.py
+ create mode 100644 tests/test_frontend_contract.py
+
+diff --git a/.env.example b/.env.example
+index bd7ff5c..612ec76 100644
+--- a/.env.example
++++ b/.env.example
+@@ -11,3 +11,5 @@ MIN_OCR_CONFIDENCE=0.65
+ # Generar una clave propia de al menos 32 caracteres; no subir .env a GitHub.
+ REVIEWER_TOKEN=
+ REVIEWER_ID=
++PROTECT_DOSSIER_ROUTES=false
++# Render: true; configurar REVIEWER_TOKEN/REVIEWER_ID y CORS_ORIGINS con orígenes HTTPS exactos.
+diff --git a/DEPLOYMENT.md b/DEPLOYMENT.md
+new file mode 100644
+index 0000000..06f0b7b
+--- /dev/null
++++ b/DEPLOYMENT.md
+@@ -0,0 +1,69 @@
++# Integración React y despliegue
++
++## Aplicación correcta y compatibilidad
++
++Este repositorio contiene **dos aplicaciones diferentes**. La integración React usa la arquitectura hexagonal de `src/infrastructure/main.py`, con persistencia SQL, almacenamiento original, OCR y flujo TUPA. Arranque:
++
++```sh
++uvicorn src.infrastructure.main:create_app --factory --host 0.0.0.0 --port $PORT
++```
++
++En PowerShell local, reemplazar `$PORT` por `8000` y usar `--host 127.0.0.1`. El comando `uvicorn src.main:app` arranca el prototipo alternativo con almacenamiento en memoria, otros estados y rutas distintas. No es intercambiable con la fábrica hexagonal. No se eliminaron sus endpoints alternativos; sus evaluaciones no se mezclan con el flujo probado. Se puede comprobar el arranque correcto mediante `/api/capacidades`, `/docs` y `/openapi.json`.
++
++Se añadió `PROTECT_DOSSIER_ROUTES` (por defecto false para preservar los clientes locales). Cuando es true, exige el Bearer de revisor en POST/GET de expedientes y GET del catálogo. Las rutas de flujo ya exigían esta credencial y mantienen esa protección. `/health` y `/api/capacidades` siguen públicos. El único cambio de respuesta existente es el campo aditivo `seguridad` de capacidades. No hay endpoints nuevos ni cambios de esquema SQL ni migraciones de datos.
++
++No existe edición de campos de extracción ni ruta de descarga de originales. La carga ya escribe en SQL y disco. La revisión TUPA es otra escritura real, con control optimista `revision`, auditoría e identidad fijada por el servidor.
++
++## Render
++
++1. Incorporar estos cambios al repositorio del backend antes de actualizar el frontend. En esta sesión solo se modificó la copia local; no se publicó en GitHub ni Render. Para el repositorio de Andree250 se necesita revisión de su mantenedor: la conexión de GitHub actual solo dispone de lectura.
++2. Python 3.12. Build `pip install -r requirements.lock.txt`. Arranque con el comando de fábrica anterior. Health check `/health`. En el repositorio independiente la raíz es `.`; en esta copia es `backend`.
++3. Configurar estas variables en el servidor (los valores de dominio son ejemplos que deben sustituirse):
++
++```dotenv
++PROTECT_DOSSIER_ROUTES=true
++REVIEWER_ID=evaluador-prototipo
++CORS_ORIGINS=["https://SU-FRONTEND.vercel.app","https://SU-DOMINIO-PROPIO"]
++DATABASE_URL=sqlite:////var/data/expedientes.db
++STORAGE_DIR=/var/data/originales
++```
++
++Configurar también **REVIEWER_TOKEN** con un valor aleatorio privado de al menos 32 caracteres, generado fuera del código y entregado al evaluador por un canal seguro. No copiarlo a VITE, Git, documentación, logs ni capturas. El token compartido no es una clave pública de aplicación; quien lo conoce puede consultar todos los expedientes protegidos de este prototipo.
++
++4. Para SQLite y originales, montar un disco persistente en `/var/data`. Sin ese disco, el almacenamiento local se pierde en reinicios y despliegues. Los discos persistentes tienen restricciones de escalado y están disponibles en servicios pagados; consultar [Render: discos persistentes](https://render.com/docs/disks). PostgreSQL puede reemplazar SQLite con una URL SQLAlchemy `postgresql+psycopg://...`, pero los originales siguen necesitando disco u otro adaptador de almacenamiento. Cambiar DATABASE_URL no migra los registros existentes. Respaldar BD y originales antes de cambiar rutas/proveedor; un disco nuevo no recupera los archivos del almacenamiento efímero anterior.
++5. Configurar los dominios exactos en CORS sin rutas ni barra final. GET/POST y los headers Content-Type/Authorization ya están permitidos; CORSMiddleware responde a OPTIONS. No se requieren cookies ni `allow_credentials` para este cliente Bearer. CORS no autoriza usuarios; las peticiones fuera del navegador siguen necesitando control de acceso. [FastAPI: CORS](https://fastapi.tiangolo.com/tutorial/cors/).
++6. Publicar después el frontend con su `VITE_API_URL` HTTPS y reconstruirlo. Ver `../frontend/README.md` en esta copia de trabajo.
++
++## Comprobación tras desplegar
++
++Con un PDF sintético y una credencial válida, sin exponerla en capturas/logs:
++
++- `/health` responde 200; capacidades anuncia `seguridad.expedientes_protegidos=true`.
++- Catálogo sin token devuelve 401; con token devuelve 200. Credencial del servidor ausente o mal configurada devuelve 503.
++- Desde Vercel, el preflight autoriza su origen exacto y headers. Un origen no incluido no recibe Access-Control-Allow-Origin.
++- Subir el PDF devuelve 201, UUID, SHA-256 y documentos; consultar por ID devuelve la misma extracción.
++- «Verificar guardado en BD» confirma la copia; consultar el ID después de un reinicio conserva el resultado. Comprobar también los originales en el disco configurado.
++- Revisar TUPA devuelve una revisión nueva y mantiene PENDIENTE_REVISION hasta completar revisión humana; enviar una revisión antigua devuelve 409. Una confianza OCR alta no acredita cumplimiento normativo.
++- El visor muestra el archivo cargado y permite descargarlo. Una consulta posterior conserva la extracción pero no recupera el original por HTTP.
++
++No se han recibido URLs activas ni acceso a los paneles para ejecutar estas comprobaciones en producción. No se probó PostgreSQL ni Linux/Render; se verificó Python 3.12 en Windows con los requisitos bloqueados y también con las versiones resueltas de requirements.txt.
++
++## Autenticación segura propuesta para una publicación municipal
++
++La protección añadida corrige el acceso simulado y limita las rutas del prototipo, pero no resuelve usuarios individuales. Antes de expedientes reales:
++
++- Integrar un proveedor OIDC con flujo de autorización y PKCE, o un BFF con sesión en cookies HttpOnly/Secure y protección CSRF. No guardar un secreto de aplicación en una SPA ni tokens duraderos en localStorage.
++- Validar en el backend emisor, audiencia, firma, caducidad y permisos; obtener la identidad del token/sesión validada. Incorporar roles y acceso por expediente/unidad; nunca confiar en el alias enviado por React para auditoría.
++- Añadir expiración, revocación, rotación, límites de intentos/carga, auditoría de accesos y controles de privacidad. El token actual no tiene caducidad ni revocación individual y se rota mediante configuración del servidor.
++- Si se requiere editar campos, acordar primero el contrato de actualización con validación, autorización y control de versión. Si se requiere recuperar PDFs, añadir un puerto de lectura y un caso de uso de descarga con autorización por expediente. No asumir esas rutas antes de implementarlas y probarlas.
++
++La implementación concreta de identidad depende del proveedor y de la política municipal; no se creó un login ficticio ni se afirma seguridad multiusuario.
++
++## Pruebas
++
++```powershell
++.venv\Scripts\python.exe -m pytest -q
++.venv\Scripts\python.exe -m compileall -q src
++```
++
++Las pruebas incluyen PDFs sintéticos, OCR real, persistencia al recrear la aplicación, flujos TUPA, concurrencia, autenticación, CORS y compatibilidad del modo local. La prueba HTTP adicional del frontend arranca `tests/support_frontend_server.py` en localhost con SQLite/PDF temporales y token efímero, sin tocar producción.
+diff --git a/README.md b/README.md
+index e4e1e2e..2ba9ff5 100644
+--- a/README.md
++++ b/README.md
+@@ -1,5 +1,7 @@
+ # Backend de expedientes - Municipalidad Provincial de Huancayo
+ 
++**Integración React, protección de rutas y despliegue Vercel/Render:** consultar [DEPLOYMENT.md](DEPLOYMENT.md). Usar `src.infrastructure.main:create_app --factory`; `src.main:app` es otra aplicación con contrato y persistencia diferentes.
++
+ API Python/FastAPI con arquitectura hexagonal para extracción documental y un flujo académico de Huancayo. Se conserva la interfaz local existente sin ampliar el frontend. Esta iteración añade catálogo TUPA piloto, revisión documental, borradores versionados, auditoría, bandeja local y privacidad sin envíos externos. No emite actos administrativos ni dispone de modelos predictivos entrenados.
+ 
+ **Guía actual de las siete historias, fuentes, límites y pruebas: [docs/HUANCAYO.md](docs/HUANCAYO.md).** Consulte también `GET /api/capacidades`. Las instrucciones y limitaciones HU01 que siguen describen el módulo original de extracción.
+diff --git a/src/infrastructure/adapters/input/municipal.py b/src/infrastructure/adapters/input/municipal.py
+index 9e81fcf..d491941 100644
+--- a/src/infrastructure/adapters/input/municipal.py
++++ b/src/infrastructure/adapters/input/municipal.py
+@@ -1,9 +1,8 @@
+ from dataclasses import asdict
+-from secrets import compare_digest
+ from typing import Literal
+ from uuid import UUID
+ from fastapi import APIRouter, Depends, HTTPException
+-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
++from src.infrastructure.adapters.input.security import reviewer_dependency
+ from pydantic import BaseModel, ConfigDict, Field
+ from src.domain.workflow import Conflict, DependencyUnavailable, NotFound, WorkflowError
+ 
+@@ -40,17 +39,7 @@ class PrivacyRequest(BaseModel):
+ 
+ def build_municipal_router(service, settings):
+     router = APIRouter(prefix="/api")
+-    bearer = HTTPBearer(auto_error=False)
+-
+-    def reviewer(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
+-        token = settings.reviewer_token.get_secret_value()
+-        if len(token) < 32 or not settings.reviewer_id.strip():
+-            raise HTTPException(503, detail={"codigo": "REVISOR_NO_CONFIGURADO",
+-                                "mensaje": "Configure REVIEWER_TOKEN (mínimo 32 caracteres) y REVIEWER_ID en .env para usar el flujo local."})
+-        if credentials is None or not compare_digest(credentials.credentials.encode(), token.encode()):
+-            raise HTTPException(401, detail="Credencial de evaluador inválida.",
+-                                headers={"WWW-Authenticate": "Bearer"})
+-        return settings.reviewer_id
++    reviewer = reviewer_dependency(settings)
+ 
+     def invoke(function, *args):
+         try:
+@@ -68,6 +57,8 @@ def build_municipal_router(service, settings):
+     @router.get("/capacidades", tags=["Servicio"], summary="Alcance real del prototipo Huancayo")
+     def capabilities():
+         return {"municipalidad": "Municipalidad Provincial de Huancayo", "modo": "ACADEMICO_LOCAL",
++                "seguridad": {"expedientes_protegidos": settings.protect_dossier_routes,
++                              "autenticacion": "TOKEN_REVISOR_PROTOTIPO"},
+                 "HU01": "OCR_Y_CLASIFICACION_LOCAL",
+                 "HU02": "PREVALIDACION_TUPA_PILOTO_CON_REVISION_HUMANA",
+                 "HU03": "BORRADORES_VERSIONADOS_Y_AUDITORIA; EMISION_NO_DISPONIBLE",
+@@ -76,7 +67,8 @@ def build_municipal_router(service, settings):
+                 "HU06": "FALTANTES_DOCUMENTALES; PROBABILIDAD_NO_DISPONIBLE",
+                 "HU07": "ENMASCARAMIENTO_LOCAL_PARCIAL; TRANSMISION_EXTERNA_BLOQUEADA"}
+ 
+-    @router.get("/tupa/procedimientos", tags=["HU02"], summary="Catálogo piloto oficial de Huancayo")
++    @router.get("/tupa/procedimientos", tags=["HU02"], summary="Catálogo piloto oficial de Huancayo",
++                dependencies=[Depends(reviewer)] if settings.protect_dossier_routes else [])
+     def procedures():
+         return {"municipalidad": "Municipalidad Provincial de Huancayo", "catalogo_completo": False,
+                 "vigencia_normativa_2026_certificada": False,
+diff --git a/src/infrastructure/adapters/input/security.py b/src/infrastructure/adapters/input/security.py
+new file mode 100644
+index 0000000..87071c9
+--- /dev/null
++++ b/src/infrastructure/adapters/input/security.py
+@@ -0,0 +1,20 @@
++"""Autenticación del prototipo, compartida por los adaptadores HTTP."""
++from secrets import compare_digest
++from fastapi import Depends, HTTPException
++from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
++
++
++def reviewer_dependency(settings):
++    bearer = HTTPBearer(auto_error=False)
++
++    def reviewer(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
++        token = settings.reviewer_token.get_secret_value()
++        if len(token) < 32 or not settings.reviewer_id.strip():
++            raise HTTPException(503, detail={"codigo": "REVISOR_NO_CONFIGURADO",
++                                "mensaje": "El acceso de evaluador no está configurado en el servidor."})
++        if credentials is None or not compare_digest(credentials.credentials.encode(), token.encode()):
++            raise HTTPException(401, detail="Credencial de evaluador inválida.",
++                                headers={"WWW-Authenticate": "Bearer"})
++        return settings.reviewer_id
++
++    return reviewer
+diff --git a/src/infrastructure/main.py b/src/infrastructure/main.py
+index 3d29e63..ccc2c98 100644
+--- a/src/infrastructure/main.py
++++ b/src/infrastructure/main.py
+@@ -1,6 +1,7 @@
+ from contextlib import asynccontextmanager
+ from pathlib import Path
+ from fastapi import FastAPI
++from fastapi import Depends
+ from fastapi.middleware.cors import CORSMiddleware
+ from fastapi.responses import FileResponse
+ from fastapi.staticfiles import StaticFiles
+@@ -13,6 +14,7 @@ from src.infrastructure.settings import Settings
+ from src.application.workflow import MunicipalWorkflow
+ from src.domain.privacy import LocalPrivacyFilter
+ from src.infrastructure.adapters.input.municipal import build_municipal_router
++from src.infrastructure.adapters.input.security import reviewer_dependency
+ from src.infrastructure.adapters.output.workflow import (
+     JSONProcedureCatalog, SQLWorkflowRepository, UnavailableAdministrativeGateway,
+     UnavailableRoutingModel,
+@@ -40,7 +42,9 @@ def create_app(settings=None, reader=None):
+                        allow_methods=["GET", "POST"], allow_headers=["Content-Type", "Authorization"])
+     web_dir = Path(__file__).parent / "adapters" / "input" / "web"
+     app.mount("/assets", StaticFiles(directory=web_dir / "assets"), name="assets")
+-    app.include_router(build_router(ProcessDossier(reader, repository, storage), GetDossier(repository), settings.max_file_mb))
++    dossier_dependencies = [Depends(reviewer_dependency(settings))] if settings.protect_dossier_routes else []
++    app.include_router(build_router(ProcessDossier(reader, repository, storage), GetDossier(repository), settings.max_file_mb),
++                       dependencies=dossier_dependencies)
+     app.include_router(build_municipal_router(workflow, settings))
+ 
+     @app.get("/", include_in_schema=False)
+diff --git a/src/infrastructure/settings.py b/src/infrastructure/settings.py
+index cb4c11b..df31446 100644
+--- a/src/infrastructure/settings.py
++++ b/src/infrastructure/settings.py
+@@ -13,3 +13,5 @@ class Settings(BaseSettings):
+     min_ocr_confidence: float = Field(default=0.65, ge=0, le=1)
+     reviewer_token: SecretStr = SecretStr("")
+     reviewer_id: str = ""
++    # False conserva el contrato público local; activar en Render para el cliente React.
++    protect_dossier_routes: bool = False
+diff --git a/tests/support_frontend_server.py b/tests/support_frontend_server.py
+new file mode 100644
+index 0000000..f846885
+--- /dev/null
++++ b/tests/support_frontend_server.py
+@@ -0,0 +1,31 @@
++"""Servidor efímero para probar los adaptadores React por HTTP, con PDF sintético."""
++import base64
++import json
++import os
++from pathlib import Path
++import socket
++import sys
++from tempfile import TemporaryDirectory
++
++sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
++import pymupdf
++import uvicorn
++from src.infrastructure.main import create_app
++from src.infrastructure.settings import Settings
++
++
++if __name__ == '__main__':
++    with TemporaryDirectory(prefix='municipal-contract-') as temporary:
++        root = Path(temporary)
++        settings = Settings(database_url=f"sqlite:///{root / 'test.sqlite'}", storage_dir=str(root / 'pdf'),
++                            reviewer_token=os.environ['CONTRACT_TOKEN'], reviewer_id='evaluador-sintetico',
++                            protect_dossier_routes=True, cors_origins=['https://municipal-test.vercel.app'])
++        with pymupdf.open() as pdf:
++            page = pdf.new_page()
++            page.insert_text((60, 60), 'FORMULARIO UNICO DE TRAMITE\nDNI: 12345678\nSOLICITO: certificado')
++            content = base64.b64encode(pdf.tobytes()).decode()
++        with socket.socket() as listener:
++            listener.bind(('127.0.0.1', 0))
++            print(json.dumps({'port': listener.getsockname()[1], 'pdf': content}), flush=True)
++            server = uvicorn.Server(uvicorn.Config(create_app(settings), log_level='error'))
++            server.run(sockets=[listener])
+diff --git a/tests/test_frontend_contract.py b/tests/test_frontend_contract.py
+new file mode 100644
+index 0000000..34a9fea
+--- /dev/null
++++ b/tests/test_frontend_contract.py
+@@ -0,0 +1,83 @@
++"""Contratos usados por React y compatibilidad del modo público local."""
++from uuid import uuid4
++import pytest
++from fastapi.testclient import TestClient
++from src.domain.valueObjects import Page
++from src.infrastructure.main import create_app
++from src.infrastructure.settings import Settings
++
++TOKEN = "credencial-ficticia-de-pruebas-" + "x" * 32
++AUTH = {"Authorization": "Bearer " + TOKEN}
++
++
++class Reader:
++    def extract(self, content):
++        return [Page(1, "FORMULARIO UNICO DE TRAMITE\nDNI: 12345678", 1, "TEXTO_PDF")]
++
++
++def configuration(tmp_path, **overrides):
++    return Settings(database_url=f"sqlite:///{tmp_path / 'db.sqlite'}", storage_dir=str(tmp_path / 'pdf'),
++                    reviewer_token=TOKEN, reviewer_id="evaluador-test", **overrides)
++
++
++@pytest.mark.parametrize("protected", [False, True])
++def test_existing_routes_and_protected_mode(tmp_path, protected):
++    settings = configuration(tmp_path, protect_dossier_routes=protected)
++    with TestClient(create_app(settings, reader=Reader())) as client:
++        assert client.get('/api/capacidades').json()['seguridad']['expedientes_protegidos'] is protected
++        catalog = client.get('/api/tupa/procedimientos')
++        assert catalog.status_code == (401 if protected else 200)
++        files = {'archivo': ('test.pdf', b'%PDF-test', 'application/pdf')}
++        if protected:
++            assert client.post('/api/expedientes', files=files).status_code == 401
++            assert client.get(f'/api/expedientes/{uuid4()}').status_code == 401
++            assert client.get('/api/tupa/procedimientos', headers={'Authorization': 'Bearer invalid'}).status_code == 401
++        assert client.get('/api/tupa/procedimientos', headers=AUTH).status_code == 200
++        created = client.post('/api/expedientes', files=files, headers=AUTH)
++        assert created.status_code == 201
++        data = created.json()
++        assert data['estado'] == 'PROCESADO'
++        assert data['documentos'][0]['metodo_extraccion'] == 'TEXTO_PDF'
++        assert client.get(f"/api/expedientes/{data['id']}", headers=AUTH).json() == data
++        flow_path = f"/api/expedientes/{data['id']}/flujo"
++        assert client.get(flow_path, headers=AUTH).json()['revision'] == 0
++        validation = client.post(f"/api/expedientes/{data['id']}/validacion", headers=AUTH,
++                                 json={'codigo_tupa': 'PA12115285', 'revision': 0, 'verificaciones': {}})
++        assert validation.status_code == 200
++        assert validation.json()['validation']['estado'] == 'PENDIENTE_REVISION'
++        assert client.get(flow_path, headers=AUTH).json()['revision'] == 1
++        assert client.post(f"/api/expedientes/{data['id']}/validacion", headers=AUTH,
++                           json={'codigo_tupa': 'PA12115285', 'revision': 0, 'verificaciones': {}}).status_code == 409
++    # Reabrir app/BD demuestra persistencia, no una respuesta en memoria.
++    with TestClient(create_app(settings, reader=Reader())) as client:
++        assert client.get(f"/api/expedientes/{data['id']}", headers=AUTH).json() == data
++        assert client.get(flow_path, headers=AUTH).json()['revision'] == 1
++
++
++def test_protected_mode_without_server_credential_fails_closed(tmp_path):
++    settings = configuration(tmp_path, protect_dossier_routes=True)
++    settings.reviewer_id = ''
++    with TestClient(create_app(settings, reader=Reader())) as client:
++        assert client.get('/api/tupa/procedimientos', headers=AUTH).status_code == 503
++        assert client.post('/api/expedientes', headers=AUTH).status_code == 503
++
++
++def test_vercel_preflight_and_disallowed_origin(tmp_path):
++    origin = 'https://municipal-test.vercel.app'
++    settings = configuration(tmp_path, protect_dossier_routes=True, cors_origins=[origin])
++    with TestClient(create_app(settings, reader=Reader())) as client:
++        for method in ['GET', 'POST']:
++            response = client.options('/api/expedientes', headers={
++                'Origin': origin, 'Access-Control-Request-Method': method,
++                'Access-Control-Request-Headers': 'authorization,content-type',
++            })
++            assert response.status_code == 200
++            assert response.headers['access-control-allow-origin'] == origin
++        response = client.get('/api/tupa/procedimientos', headers={'Origin': origin})
++        assert response.status_code == 401
++        assert response.headers['access-control-allow-origin'] == origin
++        response = client.options('/api/expedientes', headers={
++            'Origin': 'https://otro-dominio.example', 'Access-Control-Request-Method': 'POST',
++        })
++        assert response.status_code == 400
++        assert 'access-control-allow-origin' not in response.headers
+-- 
+2.54.0.windows.1
+

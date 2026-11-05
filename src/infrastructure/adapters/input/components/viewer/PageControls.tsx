@@ -56,6 +56,7 @@ export function PageControls({
       <div className="w-full flex items-center justify-center gap-4 pt-2">
         <button
           onClick={onPrev}
+          disabled={currentPage <= 1}
           className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white shadow-xs hover:bg-surface-container text-on-surface font-label-md text-label-md border border-surface-container"
         >
           <span className="material-symbols-outlined text-[16px]">chevron_left</span> Anterior
@@ -65,6 +66,7 @@ export function PageControls({
         </span>
         <button
           onClick={onNext}
+          disabled={currentPage >= totalPages}
           className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white shadow-xs hover:bg-surface-container text-on-surface font-label-md text-label-md border border-surface-container"
         >
           Siguiente <span className="material-symbols-outlined text-[16px]">chevron_right</span>

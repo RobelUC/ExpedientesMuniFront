@@ -6,9 +6,10 @@ import { DocumentPreview } from './DocumentPreview';
 
 export interface DocumentViewerProps {
   expediente: Expediente;
+  pdfUrl?: string;
 }
 
-export function DocumentViewer({ expediente }: DocumentViewerProps) {
+export function DocumentViewer({ expediente, pdfUrl }: DocumentViewerProps) {
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
   const activeSection = expediente.sections[activeSectionIndex];
   
@@ -54,7 +55,7 @@ export function DocumentViewer({ expediente }: DocumentViewerProps) {
         onPrev={handlePrev} 
         onNext={handleNext}
       >
-        <DocumentPreview section={activeSection} />
+        <DocumentPreview pdfUrl={pdfUrl} page={currentPage} zoom={zoom} />
       </PageControls>
     </div>
   );
