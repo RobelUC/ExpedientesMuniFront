@@ -33,6 +33,7 @@ export interface Workflow {
 }
 
 export interface Draft {
+  ia?: { proveedor: string; modelo: string; respuesta_id: string; version_prompt: string };
   version: number;
   contenido: string;
   autor: string;
@@ -63,6 +64,7 @@ export interface RoutingDecision {
   alcance?: string;
 }
 export interface WorkflowCapabilities {
+  ia_generativa?: { configurada: boolean; proveedor: string | null; modelo: string | null };
   demo?: boolean;
   simulaciones?: { habilitadas: boolean; firma_sisgedoc_notificacion: boolean; modelo_datos_sinteticos: boolean };
   integraciones?: {

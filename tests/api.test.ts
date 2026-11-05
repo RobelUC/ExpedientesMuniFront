@@ -124,6 +124,14 @@ describe('persistencia y autenticación', () => {
 });
 
 describe('TUPA', () => {
+  it('genera con GPT mediante POST autenticado y revisión, sin reenviar el expediente', async () => {
+    client.setToken('token-prueba');
+    fetchMock.mockResolvedValue(reply({ revision: 2 }, 201));
+    await new TupaUseCases(new ApiTupaAdapter(client)).generateDraft('id', 1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://api.example/api/expedientes/id/borradores/ia');
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ revision: 1 });
+    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get('Authorization')).toBe('Bearer token-prueba');
+  });
   it('usa las rutas reales, revisión y JSON compatibles', async () => {
     const service = new TupaUseCases(new ApiTupaAdapter(client));
     const checks = { identidad: { estado: 'CUMPLE' as const, nota: 'Revisado', paginas: [1] } };
