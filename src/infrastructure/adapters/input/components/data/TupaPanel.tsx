@@ -124,7 +124,7 @@ export function TupaPanel({ expediente, service }: Props) {
     {flow?.validation.advertencia && <p className="text-body-sm">{flow.validation.advertencia}</p>}
     {flow && catalog && <WorkflowPanel key={refreshToken} flow={flow} catalog={catalog} capabilities={capabilities} disabled={loading} validationDirty={dirty}
       onDraftDirtyChange={setDraftDirty}
-      onGenerateDraft={() => run(revision => service.generateDraft(expediente.id, revision), 'Borrador generado con OpenAI y guardado. Revise su contenido antes de aprobarlo.')}
+      onGenerateDraft={() => run(revision => service.generateDraft(expediente.id, revision), 'Borrador generado con IA y guardado. Revise su contenido antes de aprobarlo.')}
       onSaveDraft={content => run(revision => service.saveDraft(expediente.id, content, revision), 'Nueva versión guardada con auditoría.')}
       onRoute={() => run(revision => service.route(expediente.id, revision), 'Destino local actualizado.')}
       onAssign={department => run(revision => service.assign(expediente.id, department, revision), 'Asignación manual guardada en el flujo local.')}
