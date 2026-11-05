@@ -65,6 +65,12 @@ describe('HTTP', () => {
 });
 
 describe('persistencia y autenticación', () => {
+  it('propaga el modo académico del servidor para mostrarlo antes de cargar un PDF', async () => {
+    fetchMock.mockResolvedValueOnce(reply({ demo: true, seguridad: { expedientes_protegidos: true } })).mockResolvedValueOnce(reply({ procedimientos: [] }));
+    const user = await new ApiAuthAdapter(client).login('Alias', 'token-ficticio');
+    expect(user.demo).toBe(true);
+    expect(user.role).toContain('demostración universitaria');
+  });
   it('envía multipart archivo, recibe 201 y verifica con GET sin simular escritura', async () => {
     const adapter = new ApiExpedienteAdapter(client);
     fetchMock.mockResolvedValueOnce(reply(dossier, 201)).mockResolvedValueOnce(reply(dossier));

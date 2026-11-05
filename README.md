@@ -1,5 +1,7 @@
 # GobExpedientes AI — integración con FastAPI
 
+**Modo universitario:** con ACADEMIC_DEMO=true en el backend, el portal anuncia DEMO UNIVERSITARIA, ofrece siete PDFs ficticios para descargar, auditoría automática de práctica, modelo sintético y emisión simulada. [Guion y fuente TUPA verificada](https://github.com/PGTEV/Back-End-TP/blob/codex/pmv-hu01-hu04/docs/DEMO_UNIVERSITARIA.md). No requiere claves externas ni constituye una integración municipal real.
+
 Se conserva React/TypeScript y la separación dominio → puertos → casos de uso → adaptadores. La composición real usa `ApiExpedienteAdapter`, `ApiAuthAdapter` y `ApiTupaAdapter`; los adaptadores de demostración siguen disponibles en el código y no se incluyen en la composición real. Se conservan estilos y estructura del portal.
 
 ## Ampliación HU01–HU04

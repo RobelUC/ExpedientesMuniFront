@@ -2,6 +2,7 @@ export interface Procedure {
   code: string;
   name: string;
   department: string;
+  pdf_pages?: number[];
   requirements: { id: string; description: string; conditional: boolean }[];
 }
 export interface Catalog {
@@ -18,6 +19,7 @@ export interface Workflow {
   dossier_id: string;
   revision: number;
   procedure_code: string | null;
+  demo?: boolean;
   drafts?: Draft[];
   audit?: AuditEntry[];
   routing?: RoutingDecision;
@@ -38,9 +40,10 @@ export interface Draft {
   tipo: string;
   vigente: boolean;
   estado: string;
-  firma: unknown | null;
-  sisgedoc: unknown | null;
-  notificacion: unknown | null;
+  firma: { tipo?: string; firmante?: string; sha256_borrador?: string; validez_legal?: boolean } | null;
+  sisgedoc: { tipo?: string; registro?: string; estado?: string; transmision_externa?: boolean } | null;
+  notificacion: { tipo?: string; estado?: string; destinatario?: string; envio_real?: boolean } | null;
+  validez_legal?: boolean;
 }
 export interface AuditEntry {
   actor: string;
@@ -49,6 +52,7 @@ export interface AuditEntry {
   detail: { version?: number; version_anterior?: number; tipo?: string };
 }
 export interface RoutingDecision {
+  simulado?: boolean;
   estado?: string;
   destino?: string | null;
   sugerencia?: string;
@@ -59,6 +63,8 @@ export interface RoutingDecision {
   alcance?: string;
 }
 export interface WorkflowCapabilities {
+  demo?: boolean;
+  simulaciones?: { habilitadas: boolean; firma_sisgedoc_notificacion: boolean; modelo_datos_sinteticos: boolean };
   integraciones?: {
     firma_electronica: boolean;
     sisgedoc: boolean;

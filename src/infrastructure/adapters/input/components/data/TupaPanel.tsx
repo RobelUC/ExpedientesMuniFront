@@ -46,12 +46,12 @@ export function TupaPanel({ expediente, service }: Props) {
     setSaved(false);
     setDirty(true); setActionMessage('');
   };
-  const submit = async () => {
+  const submit = async (automatic = false) => {
     if (!flow || busy.current || draftDirty) return;
     busy.current = true; setLoading(true); setError(''); setSaved(false); setActionMessage('');
     try {
       const payload: Record<string, RequirementCheck> = {};
-      for (const requirement of procedure?.requirements || []) {
+      for (const requirement of automatic ? [] : procedure?.requirements || []) {
         const check = checks[requirement.id];
         if (!check || (check.estado === 'PENDIENTE' && !check.nota.trim() && !check.paginas.trim())) continue;
         payload[requirement.id] = { ...check, paginas: check.paginas.trim() ? check.paginas.split(',').map(v => Number(v.trim())) : [] };
@@ -80,6 +80,7 @@ export function TupaPanel({ expediente, service }: Props) {
 
   return <section className="bg-surface-container-lowest border border-surface-container-high rounded-xl p-4 flex flex-col gap-3">
     <h2 className="font-headline-sm text-primary font-bold">Revisión documental TUPA</h2>
+    {(capabilities?.demo || flow?.demo) && <div role="status" className="bg-tertiary-fixed/30 text-on-tertiary-container p-3 rounded-lg font-bold">DEMO UNIVERSITARIA: expedientes ficticios, auditoría de evidencias de práctica y servicios simulados. Sin validez legal.</div>}
     <p className="text-body-sm text-on-surface-variant">Catálogo piloto. Vigencia normativa no certificada. OCR no verifica firmas, pagos ni validez legal.</p>
     {loading && <p role="status">Cargando revisión...</p>}
     {error && <p role="alert" className="text-on-error-container bg-error-container p-3 rounded">{error}</p>}
@@ -91,6 +92,7 @@ export function TupaPanel({ expediente, service }: Props) {
           {catalog.procedimientos.map(p => <option key={p.code} value={p.code}>{p.code} · {p.name}</option>)}
         </select>
       </label>
+      {!!procedure?.pdf_pages?.length && <p className="text-body-sm">Fuente: TUPA Huancayo 2025, páginas del PDF {procedure.pdf_pages.join(', ')}.</p>}
       {procedure?.requirements.map(requirement => {
         const check = checks[requirement.id] || emptyCheck;
         const candidates = flow?.procedure_code === code ? flow.validation.requisitos?.find(r => r.id === requirement.id)?.paginas_candidatas : undefined;
@@ -109,14 +111,15 @@ export function TupaPanel({ expediente, service }: Props) {
           </label>
         </fieldset>;
       })}
-      <button disabled={loading || draftDirty || !code || expediente.status !== 'procesado' || !flow} onClick={submit} className="bg-primary text-on-primary rounded-xl p-3 font-bold disabled:opacity-50">Guardar revisión TUPA</button>
+      {capabilities?.demo && <button disabled={loading || draftDirty || !code || expediente.status !== 'procesado' || !flow || flow.drafts?.at(-1)?.estado === 'EMITIDO_DEMO'} onClick={() => submit(true)} className="bg-primary text-on-primary rounded-xl p-3 font-bold disabled:opacity-50">Auditar automáticamente (demostración)</button>}
+      <button disabled={loading || draftDirty || !code || expediente.status !== 'procesado' || !flow || flow.drafts?.at(-1)?.estado === 'EMITIDO_DEMO'} onClick={() => submit(false)} className="bg-primary text-on-primary rounded-xl p-3 font-bold disabled:opacity-50">Guardar revisión TUPA</button>
     </>}
     <button disabled={loading} onClick={refresh} className="text-primary underline">Recargar catálogo y revisión guardada (descarta cambios locales)</button>
     {saved && <p role="status">Revisión guardada en el servidor.</p>}
     {actionMessage && <p role="status">{actionMessage}</p>}
     {flow?.validation.estado && <p>Resultado guardado: {flow.validation.estado} · revisión {flow.revision}</p>}
     {!!flow?.validation.alertas?.length && <div role="alert" className="p-3 rounded bg-error-container text-on-error-container">
-      <p className="font-bold">Requisitos faltantes confirmados</p>
+      <p className="font-bold">{capabilities?.demo ? 'Evidencias ficticias faltantes' : 'Requisitos faltantes confirmados'}</p>
       <ul>{flow.validation.alertas.map(alert => <li key={alert.requisito}>{alert.mensaje} {alert.nota}</li>)}</ul>
     </div>}
     {flow?.validation.advertencia && <p className="text-body-sm">{flow.validation.advertencia}</p>}
@@ -125,7 +128,7 @@ export function TupaPanel({ expediente, service }: Props) {
       onSaveDraft={content => run(revision => service.saveDraft(expediente.id, content, revision), 'Nueva versión guardada con auditoría.')}
       onRoute={() => run(revision => service.route(expediente.id, revision), 'Destino local actualizado.')}
       onAssign={department => run(revision => service.assign(expediente.id, department, revision), 'Asignación manual guardada en el flujo local.')}
-      onApprove={() => run(revision => service.approveAndSign(expediente.id, revision), 'Respuesta de emisión recibida del servidor. Consulte el resultado guardado.')}
+      onApprove={() => run(revision => service.approveAndSign(expediente.id, revision), capabilities?.demo ? 'Demostración emitida: firma, registro y notificación simulados.' : 'Respuesta de emisión recibida del servidor. Consulte el resultado guardado.')}
     />}
   </section>;
 }

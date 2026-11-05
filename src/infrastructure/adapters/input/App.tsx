@@ -114,6 +114,10 @@ export default function App() {
       <button className="text-primary underline mt-2" onClick={async () => {
         await authAdapter.logout(); setUser(null); setExpediente(null); setPdfFile(null); setError(null); setMessage(null);
       }} disabled={loading}>Cerrar sesión</button>
+      {user.demo && <div role="status" className="p-4 mt-3 rounded-lg bg-tertiary-fixed/30 text-on-tertiary-container">
+        <strong>DEMO UNIVERSITARIA — datos ficticios y servicios simulados, sin validez legal.</strong>
+        <a href="/ejemplos-demo.zip" download className="block underline mt-2">Descargar paquete de expedientes ficticios (ZIP)</a>
+      </div>}
       <div className="flex flex-col w-full gap-4 pt-4">
         {/* ── Page heading ── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pb-2 border-b border-surface-container-high">

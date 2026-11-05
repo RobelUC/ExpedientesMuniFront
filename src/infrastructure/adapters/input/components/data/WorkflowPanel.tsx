@@ -27,9 +27,13 @@ export function WorkflowPanel({ flow, catalog, capabilities, disabled, validatio
   useEffect(() => { setContent(latest?.contenido || ''); }, [latest?.version, latest?.contenido]);
   useEffect(() => { setDepartment(suggestion); }, [suggestion]);
   const conform = flow.validation.estado === 'CONFORME';
-  const locked = disabled || validationDirty;
+  const emitted = latest?.estado === 'EMITIDO_DEMO';
+  const locked = disabled || validationDirty || emitted;
+  const demo = capabilities?.demo === true || flow.demo === true;
+  const syntheticModel = capabilities?.demo && capabilities.simulaciones?.modelo_datos_sinteticos;
   const integrations = capabilities?.integraciones;
-  const emissionAvailable = integrations?.firma_electronica && integrations.sisgedoc && integrations.notificaciones;
+  const emissionAvailable = (integrations?.firma_electronica && integrations.sisgedoc && integrations.notificaciones)
+    || (capabilities?.demo && flow.demo && capabilities.simulaciones?.firma_sisgedoc_notificacion);
   const draftChanged = content !== (latest?.contenido || '');
   useEffect(() => { onDraftDirtyChange(draftChanged); }, [draftChanged, onDraftDirtyChange]);
   const departments = [...new Set(catalog.procedimientos.map(p => p.department))];
@@ -38,7 +42,7 @@ export function WorkflowPanel({ flow, catalog, capabilities, disabled, validatio
     {validationDirty && <p role="status" className="text-body-sm">Guarde la validación TUPA antes de modificar el borrador o el destino.</p>}
     <section className="flex flex-col gap-2" aria-label="Borradores y revisión técnica">
       <h3 className="font-headline-sm text-primary font-bold">Borrador y revisión técnica</h3>
-      <p className="text-body-sm text-on-surface-variant">Las observaciones se generan por plantilla local. El borrador requiere revisión técnica; todavía no existe generación de resoluciones mediante IA.</p>
+      <p className="text-body-sm text-on-surface-variant">{demo ? 'Proyecto generado por plantilla académica a partir de la auditoría de evidencias ficticias. Sin validez administrativa.' : 'Las observaciones se generan por plantilla local. El borrador requiere revisión técnica; todavía no existe generación de resoluciones mediante IA.'}</p>
       {latest && <p className="text-body-sm">Versión {latest.version} · {latest.tipo} · {latest.vigente ? 'Vigente' : 'Requiere nueva revisión'} · {latest.origen}</p>}
       <label className="flex flex-col gap-1">Contenido del borrador
         <textarea aria-label="Contenido del borrador" rows={10} maxLength={100000} value={content}
@@ -49,7 +53,15 @@ export function WorkflowPanel({ flow, catalog, capabilities, disabled, validatio
         className="bg-primary text-on-primary rounded-xl p-3 font-bold disabled:opacity-50">Guardar nueva versión del borrador</button>
       <p className="text-body-sm">Cada guardado conserva las versiones anteriores y registra autor, fecha y acción.</p>
       <button onClick={onApprove} disabled={locked || !emissionAvailable || !conform || !latest?.vigente || latest.tipo !== 'PROYECTO' || draftChanged}
-        className="bg-primary text-on-primary rounded-xl p-3 font-bold disabled:opacity-50">Aprobar y Firmar</button>
+        className="bg-primary text-on-primary rounded-xl p-3 font-bold disabled:opacity-50">{demo ? 'Aprobar y Firmar (simulación)' : 'Aprobar y Firmar'}</button>
+      {demo && <p className="text-body-sm">La firma, el registro SISGEDOC y la notificación se simulan dentro de esta aplicación; no se contacta a servicios externos.</p>}
+      {emitted && <div role="status" className="p-3 border border-outline-variant rounded-lg flex flex-col gap-1">
+        <strong>Demostración emitida — SIN VALIDEZ LEGAL</strong>
+        <p>Firma: {latest.firma?.tipo} · evaluador {latest.firma?.firmante}</p>
+        <p>Registro simulado: {latest.sisgedoc?.registro}</p>
+        <p>Notificación: {latest.notificacion?.estado} · {latest.notificacion?.destinatario}</p>
+        <p className="text-body-sm">No se envió un correo real ni se registró un acto en SISGEDOC. El borrador emitido queda bloqueado.</p>
+      </div>}
       {!emissionAvailable && <p className="text-body-sm text-on-surface-variant">Firma electrónica, SISGEDOC y notificaciones no están conectados. No se puede emitir un acto administrativo.</p>}
       {!!flow.drafts?.length && <div>
         <h4 className="font-bold">Historial de versiones</h4>
@@ -62,12 +74,12 @@ export function WorkflowPanel({ flow, catalog, capabilities, disabled, validatio
 
     <section className="flex flex-col gap-2 border-t border-surface-container pt-3" aria-label="Destino local del expediente">
       <h3 className="font-headline-sm text-primary font-bold">Destino local del expediente</h3>
-      {!integrations?.enrutamiento_predictivo && <p className="text-body-sm text-on-surface-variant">Sin modelo entrenado: se ofrece clasificación manual. La gerencia publicada en el TUPA es una sugerencia, no una predicción.</p>}
+      {syntheticModel ? <p className="text-body-sm text-on-surface-variant">Modelo didáctico entrenado con textos sintéticos. Su probabilidad no está calibrada ni validada para expedientes reales.</p> : !integrations?.enrutamiento_predictivo && <p className="text-body-sm text-on-surface-variant">Sin modelo entrenado: se ofrece clasificación manual. La gerencia publicada en el TUPA es una sugerencia, no una predicción.</p>}
       <button onClick={onRoute} disabled={locked || !conform || draftChanged}
-        className="bg-primary text-on-primary rounded-xl p-3 font-bold disabled:opacity-50">{integrations?.enrutamiento_predictivo ? 'Evaluar enrutamiento' : 'Enviar a clasificación manual'}</button>
+        className="bg-primary text-on-primary rounded-xl p-3 font-bold disabled:opacity-50">{syntheticModel ? 'Evaluar enrutamiento (modelo sintético)' : integrations?.enrutamiento_predictivo ? 'Evaluar enrutamiento' : 'Enviar a clasificación manual'}</button>
       {flow.routing?.estado && <p role={flow.routing.alerta ? 'alert' : 'status'}>Estado de destino: {flow.routing.estado}{flow.routing.destino ? ` · ${flow.routing.destino}` : ''}</p>}
       {flow.routing?.alerta && <p className="text-body-sm">Se requiere decisión del evaluador para asignar la gerencia.</p>}
-      {typeof flow.routing?.confianza === 'number' && <p>Confianza del modelo: {(flow.routing.confianza * 100).toFixed(1)}% · {flow.routing.modelo}</p>}
+      {typeof flow.routing?.confianza === 'number' && <p>{flow.routing.simulado ? 'Probabilidad del modelo sintético (sin calibrar)' : 'Confianza del modelo'}: {(flow.routing.confianza * 100).toFixed(1)}% · {flow.routing.modelo}</p>}
       {suggestion && <p className="text-body-sm">Sugerencia: {suggestion}</p>}
       <label className="flex flex-col gap-1">Gerencia de destino
         <select aria-label="Gerencia de destino" disabled={locked || !conform} value={department} onChange={e => setDepartment(e.target.value)} className="border border-outline-variant rounded p-2 bg-surface">

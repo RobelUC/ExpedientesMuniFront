@@ -124,3 +124,30 @@ describe('HU04: intervención humana sin probabilidades inventadas', () => {
     expect(repository.route).not.toHaveBeenCalled();
   });
 });
+
+describe('Demostración universitaria explícita', () => {
+  it('audita automáticamente y muestra firma, registro y notificación como simulados', async () => {
+    vi.mocked(repository.getCapabilities).mockResolvedValue({ demo: true, simulaciones: {
+      habilitadas: true, firma_sisgedoc_notificacion: true, modelo_datos_sinteticos: true,
+    } });
+    const audited: Workflow = { ...initial, demo: true, revision: 2, drafts: [{ ...draft(1, 'Proyecto académico sin validez legal'), origen: 'PLANTILLA_ACADEMICA' }] };
+    vi.mocked(repository.validate).mockResolvedValue(audited);
+    vi.mocked(repository.approveAndSign).mockResolvedValue({ ...audited, revision: 3, drafts: [{ ...audited.drafts![0]!,
+      estado: 'EMITIDO_DEMO', validez_legal: false, firma: { tipo: 'FIRMA_SIMULADA', firmante: 'evaluador-demo' },
+      sisgedoc: { registro: 'DEMO-123', transmision_externa: false },
+      notificacion: { estado: 'ENTREGADA_BUZON_DEMO', destinatario: 'ciudadano-demo@example.invalid', envio_real: false },
+    }] });
+    const user = await open();
+    expect(screen.getByText(/DEMO UNIVERSITARIA:/)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Auditar automáticamente (demostración)' }));
+    await waitFor(() => expect(repository.validate).toHaveBeenCalledWith('id-prueba', 'TUPA-1', 1, {}));
+    await waitFor(() => expect(disabled('Aprobar y Firmar (simulación)')).toBe(false));
+    await user.click(screen.getByRole('button', { name: 'Aprobar y Firmar (simulación)' }));
+    await screen.findByText('Demostración emitida — SIN VALIDEZ LEGAL');
+    expect(repository.approveAndSign).toHaveBeenCalledWith('id-prueba', 2);
+    expect(screen.getByText('Registro simulado: DEMO-123')).toBeTruthy();
+    expect(screen.getByText(/No se envió un correo real/)).toBeTruthy();
+    expect(disabled('Guardar nueva versión del borrador')).toBe(true);
+    expect(disabled('Aprobar y Firmar (simulación)')).toBe(true);
+  });
+});
