@@ -25,7 +25,7 @@ beforeEach(() => {
   repository = {
     getCatalog: vi.fn().mockResolvedValue(catalog), getWorkflow: vi.fn().mockResolvedValue(structuredClone(initial)),
     getCapabilities: vi.fn().mockResolvedValue({ integraciones: { firma_electronica: false, sisgedoc: false, notificaciones: false, enrutamiento_predictivo: false } }),
-    validate: vi.fn(), saveDraft: vi.fn(), generateDraft: vi.fn(), route: vi.fn(), assign: vi.fn(), approveAndSign: vi.fn(),
+    validate: vi.fn(), saveDraft: vi.fn(), generateDraft: vi.fn(), auditWithAI: vi.fn(), route: vi.fn(), assign: vi.fn(), approveAndSign: vi.fn(),
   };
   service = new TupaUseCases(repository);
 });
@@ -39,6 +39,40 @@ async function open() {
 const disabled = (name: string) => (screen.getByRole('button', { name }) as HTMLButtonElement).disabled;
 
 describe('HU03: edición y auditoría reales desde la interfaz', () => {
+  it('muestra hallazgos y páginas de auditoría Gemini conservando el estado documental', async () => {
+    vi.mocked(repository.getCapabilities).mockResolvedValue({ ia_generativa: {
+      configurada: true, proveedor: 'GEMINI', modelo: 'gemini-test', auditoria_tupa: true } });
+    vi.mocked(repository.auditWithAI).mockResolvedValue({ ...initial, revision: 2, validation: {
+      ...initial.validation, auditoria_ia: { proveedor: 'GEMINI', modelo: 'gemini-test', respuesta_id: 'audit_test',
+        fuente: 'https://example.invalid/tupa', paginas_fuente: [524],
+        cruce_local: { requiere_revision: true, campos_comparados: ['dni'] },
+        hallazgos: [{ requisito: 'pago', hallazgo: 'EVIDENCIA_CANDIDATA', documentos: [3], paginas: [4],
+          explicacion: 'Verificar el recibo y las diferencias de identidad con revisión humana.' }] },
+    } });
+    const user = await open();
+    await user.click(screen.getByRole('button', { name: 'Analizar requisitos con Gemini' }));
+    await screen.findByText('Páginas candidatas: 4');
+    expect(repository.auditWithAI).toHaveBeenCalledWith('id-prueba', 1);
+    expect(screen.getByText(/Resultado guardado: CONFORME/)).toBeTruthy();
+    expect(screen.getByText(/Hay diferencias entre anexos/)).toBeTruthy();
+    expect(screen.getByText(/referencia audit_test/)).toBeTruthy();
+    await user.type(screen.getByRole('textbox', { name: 'Contenido del borrador' }), 'Edición sin guardar');
+    expect(disabled('Analizar requisitos con Gemini')).toBe(true);
+  });
+
+  it('conserva la revisión si falla Gemini y deshabilita la auditoría no configurada', async () => {
+    const user = await open();
+    expect(disabled('Analizar requisitos con Gemini')).toBe(true);
+    vi.mocked(repository.getCapabilities).mockResolvedValue({ ia_generativa: {
+      configurada: true, proveedor: 'GEMINI', modelo: 'gemini-test', auditoria_tupa: true } });
+    await user.click(screen.getByRole('button', { name: 'Recargar catálogo y revisión guardada (descarta cambios locales)' }));
+    await waitFor(() => expect(disabled('Analizar requisitos con Gemini')).toBe(false));
+    vi.mocked(repository.auditWithAI).mockRejectedValue(new Error('Gemini alcanzó su cuota'));
+    await user.click(screen.getByRole('button', { name: 'Analizar requisitos con Gemini' }));
+    await screen.findByText('Gemini alcanzó su cuota');
+    expect(screen.getByText(/Resultado guardado: CONFORME/)).toBeTruthy();
+    expect(screen.queryByText(/referencia audit_test/)).toBeNull();
+  });
   it('usa Gemini anunciado por el backend sin atribuir la generación a GPT', async () => {
     vi.mocked(repository.getCapabilities).mockResolvedValue({ ia_generativa: { configurada: true, proveedor: 'GEMINI', modelo: 'gemini-test' } });
     const generated = { ...draft(1, 'Proyecto redactado por Gemini'), origen: 'GEMINI',

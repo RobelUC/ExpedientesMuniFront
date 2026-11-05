@@ -122,6 +122,34 @@ export function TupaPanel({ expediente, service }: Props) {
       <ul>{flow.validation.alertas.map(alert => <li key={alert.requisito}>{alert.mensaje} {alert.nota}</li>)}</ul>
     </div>}
     {flow?.validation.advertencia && <p className="text-body-sm">{flow.validation.advertencia}</p>}
+    {!!flow?.validation.preauditoria_local?.requisitos.length && <details className="border-t pt-3">
+      <summary className="text-primary font-bold">Cruce automático de categorías con requisitos TUPA</summary>
+      <ul className="text-body-sm mt-2">{flow.validation.preauditoria_local.requisitos.map(r => <li key={r.id}>
+        {r.descripcion} · {r.hallazgo_local === 'EVIDENCIA_CANDIDATA' ? 'Anexos candidatos identificados'
+          : r.hallazgo_local === 'SIN_EVIDENCIA' ? 'Sin anexo de la categoría esperada' : 'Requiere revisión humana'}
+      </li>)}</ul>
+      <p className="text-body-sm">La categoría de un anexo no demuestra su contenido, firma, pago ni cumplimiento legal.</p>
+    </details>}
+    {flow && <section className="border-t pt-3 flex flex-col gap-2" aria-label="Auditoría TUPA con Gemini">
+      <h3 className="font-headline-sm text-primary font-bold">Auditoría TUPA con Gemini</h3>
+      <button disabled={loading || dirty || draftDirty || !flow.validation.estado || !capabilities?.ia_generativa?.auditoria_tupa || flow.drafts?.at(-1)?.estado === 'EMITIDO_DEMO'}
+        onClick={() => run(revision => service.auditWithAI(expediente.id, revision), 'Auditoría con Gemini guardada. Revise los hallazgos y las páginas candidatas.')}
+        className="bg-primary text-on-primary rounded-xl p-3 font-bold disabled:opacity-50">Analizar requisitos con Gemini</button>
+      <p className="text-body-sm">Guarde primero la revisión TUPA. Se envían solo categorías, páginas y resultados del cruce local; no se envían PDFs, texto OCR ni datos personales. La IA explica evidencias candidatas y pendientes, sin aprobarlos.</p>
+      {!capabilities?.ia_generativa?.auditoria_tupa && <p className="text-body-sm">La auditoría asistida requiere Gemini configurado en Render.</p>}
+      {flow.validation.auditoria_ia && <>
+        <p className="text-body-sm">{flow.validation.auditoria_ia.proveedor} · {flow.validation.auditoria_ia.modelo} · referencia {flow.validation.auditoria_ia.respuesta_id}</p>
+        <p className="text-body-sm">Fuente TUPA: páginas del PDF {flow.validation.auditoria_ia.paginas_fuente.join(', ')}.</p>
+        {flow.validation.auditoria_ia.cruce_local.requiere_revision && <p role="alert">Hay diferencias entre anexos que requieren revisión humana; no acreditan fraude.</p>}
+        <ul className="flex flex-col gap-2">{flow.validation.auditoria_ia.hallazgos.map(f => <li key={f.requisito} className="border rounded p-2 text-body-sm">
+          <strong>{procedure?.requirements.find(r => r.id === f.requisito)?.description || f.requisito}</strong>
+          <p>{f.hallazgo === 'EVIDENCIA_CANDIDATA' ? 'Evidencia candidata, pendiente de comprobación'
+            : f.hallazgo === 'SIN_EVIDENCIA' ? 'Sin evidencia de la categoría esperada' : 'Revisión humana requerida'}</p>
+          {!!f.paginas.length && <p>Páginas candidatas: {f.paginas.join(', ')}</p>}
+          <p>{f.explicacion}</p>
+        </li>)}</ul>
+      </>}
+    </section>}
     {flow && catalog && <WorkflowPanel key={refreshToken} flow={flow} catalog={catalog} capabilities={capabilities} disabled={loading} validationDirty={dirty}
       onDraftDirtyChange={setDraftDirty}
       onGenerateDraft={() => run(revision => service.generateDraft(expediente.id, revision), 'Borrador generado con IA y guardado. Revise su contenido antes de aprobarlo.')}

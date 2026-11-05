@@ -60,6 +60,9 @@ describe.skipIf(!available)('React adapters → FastAPI real en localhost', () =
     const saved = await tupa.validate(dossier.id, catalog.procedimientos[0]!.code, flow.revision, {});
     expect(saved.revision).toBe(1);
     expect(saved.validation.estado).toBe('PENDIENTE_REVISION');
+    expect(saved.validation.preauditoria_local?.requisitos.length).toBeGreaterThan(0);
+    await expect(tupa.auditWithAI(dossier.id, saved.revision)).rejects.toThrow('no está configurada');
+    expect((await tupa.getWorkflow(dossier.id)).revision).toBe(saved.revision);
     await expect(tupa.validate(dossier.id, catalog.procedimientos[0]!.code, 0, {})).rejects.toThrow('versión');
     const procedure = catalog.procedimientos.find(p => p.code === 'PA12115285')!;
     const checks = Object.fromEntries(procedure.requirements.map(r => [r.id, {
