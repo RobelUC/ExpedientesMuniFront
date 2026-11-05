@@ -39,6 +39,18 @@ async function open() {
 const disabled = (name: string) => (screen.getByRole('button', { name }) as HTMLButtonElement).disabled;
 
 describe('HU03: edición y auditoría reales desde la interfaz', () => {
+  it('usa Gemini anunciado por el backend sin atribuir la generación a GPT', async () => {
+    vi.mocked(repository.getCapabilities).mockResolvedValue({ ia_generativa: { configurada: true, proveedor: 'GEMINI', modelo: 'gemini-test' } });
+    const generated = { ...draft(1, 'Proyecto redactado por Gemini'), origen: 'GEMINI',
+      ia: { proveedor: 'GEMINI', modelo: 'gemini-test', respuesta_id: 'gemini_response', version_prompt: 'V1' } };
+    vi.mocked(repository.generateDraft).mockResolvedValue({ ...initial, revision: 2, drafts: [generated] });
+    const user = await open();
+    expect(screen.queryByRole('button', { name: 'Generar borrador con GPT' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Generar borrador con Gemini' }));
+    await screen.findByText(/Generado por GEMINI/);
+    expect(repository.generateDraft).toHaveBeenCalledWith('id-prueba', 1);
+    expect((screen.getByRole('textbox', { name: 'Contenido del borrador' }) as HTMLTextAreaElement).value).toBe('Proyecto redactado por Gemini');
+  });
   it('genera con GPT y muestra procedencia, conservando edición y revisión humana', async () => {
     vi.mocked(repository.getCapabilities).mockResolvedValue({ ia_generativa: { configurada: true, proveedor: 'OPENAI', modelo: 'modelo-test' } });
     const generated = { ...draft(1, 'Proyecto generado por GPT'), origen: 'OPENAI',
@@ -58,7 +70,7 @@ describe('HU03: edición y auditoría reales desde la interfaz', () => {
   it('deshabilita GPT sin configurar y conserva el borrador cuando falla el proveedor', async () => {
     vi.mocked(repository.getWorkflow).mockResolvedValue({ ...initial, drafts: [draft(1, 'Versión anterior')] });
     const user = await open();
-    expect(disabled('Generar borrador con GPT')).toBe(true);
+    expect(disabled('Generar borrador con IA')).toBe(true);
     vi.mocked(repository.getCapabilities).mockResolvedValue({ ia_generativa: { configurada: true, proveedor: 'OPENAI', modelo: 'modelo-test' } });
     await user.click(screen.getByRole('button', { name: 'Recargar catálogo y revisión guardada (descarta cambios locales)' }));
     await waitFor(() => expect(disabled('Generar borrador con GPT')).toBe(false));

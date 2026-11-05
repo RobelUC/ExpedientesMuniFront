@@ -16,7 +16,7 @@ interface Props {
 }
 const actions: Record<string, string> = {
   VALIDACION_TUPA: 'Validación TUPA', VERSION_BORRADOR: 'Edición del borrador',
-  BORRADOR_IA: 'Generación con OpenAI',
+  BORRADOR_IA: 'Generación con IA',
   ENRUTAMIENTO: 'Evaluación de destino', ASIGNACION_MANUAL: 'Asignación manual',
 };
 
@@ -39,18 +39,25 @@ export function WorkflowPanel({ flow, catalog, capabilities, disabled, validatio
   const draftChanged = content !== (latest?.contenido || '');
   useEffect(() => { onDraftDirtyChange(draftChanged); }, [draftChanged, onDraftDirtyChange]);
   const departments = [...new Set(catalog.procedimientos.map(p => p.department))];
+  const aiName = capabilities?.ia_generativa?.proveedor === 'GEMINI' ? 'Gemini'
+    : capabilities?.ia_generativa?.proveedor === 'OPENAI' ? 'GPT' : 'IA';
+  const aiBlockedReason = emitted ? 'El expediente ya fue emitido; cargue otro para generar un nuevo borrador.'
+    : validationDirty ? 'Guarde la revisión TUPA antes de generar.'
+    : draftChanged ? 'Guarde los cambios del borrador antes de generar otra versión.'
+    : !flow.validation.estado ? 'Seleccione un procedimiento y guarde la revisión TUPA antes de generar.' : '';
 
   return <div className="flex flex-col gap-4 border-t border-surface-container-high pt-4">
     {validationDirty && <p role="status" className="text-body-sm">Guarde la validación TUPA antes de modificar el borrador o el destino.</p>}
     <section className="flex flex-col gap-2" aria-label="Borradores y revisión técnica">
       <h3 className="font-headline-sm text-primary font-bold">Borrador y revisión técnica</h3>
       <button onClick={onGenerateDraft} disabled={locked || draftChanged || !flow.validation.estado || !capabilities?.ia_generativa?.configurada || !onGenerateDraft}
-        className="bg-primary text-on-primary rounded-xl p-3 font-bold disabled:opacity-50">Generar borrador con GPT</button>
+        className="bg-primary text-on-primary rounded-xl p-3 font-bold disabled:opacity-50">Generar borrador con {aiName}</button>
+      {aiBlockedReason && <p className="text-body-sm">{aiBlockedReason}</p>}
       <p className="text-body-sm text-on-surface-variant">{capabilities?.ia_generativa?.configurada
-        ? `OpenAI · ${capabilities.ia_generativa.modelo}. Se enviarán requisitos públicos y estados de revisión, sin PDF ni texto OCR. Cada generación usa la API.`
-        : 'Para generar con GPT, configure OpenAI en el backend de Render.'}</p>
+        ? `${capabilities.ia_generativa.proveedor === 'GEMINI' ? 'Gemini' : 'OpenAI'} · ${capabilities.ia_generativa.modelo}. Se enviarán requisitos públicos y estados de revisión, sin PDF ni texto OCR. Cada generación usa la API.`
+        : 'Para generar con IA, configure Gemini u OpenAI en el backend de Render.'}</p>
       {latest?.ia && <p className="text-body-sm">Generado por {latest.ia.proveedor} · modelo {latest.ia.modelo} · referencia {latest.ia.respuesta_id}. Requiere revisión humana.</p>}
-      <p className="text-body-sm text-on-surface-variant">El origen de cada versión indica si proviene de una plantilla, de GPT o de una edición humana. Revise el contenido y el sustento documental antes de continuar.</p>
+      <p className="text-body-sm text-on-surface-variant">El origen de cada versión indica si proviene de una plantilla, de IA o de una edición humana. Revise el contenido y el sustento documental antes de continuar.</p>
       {latest && <p className="text-body-sm">Versión {latest.version} · {latest.tipo} · {latest.vigente ? 'Vigente' : 'Requiere nueva revisión'} · {latest.origen}</p>}
       <label className="flex flex-col gap-1">Contenido del borrador
         <textarea aria-label="Contenido del borrador" rows={10} maxLength={100000} value={content}
