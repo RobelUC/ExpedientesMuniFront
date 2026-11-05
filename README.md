@@ -1,6 +1,16 @@
 # GobExpedientes AI — integración con FastAPI
 
+**Ingreso y cruce de anexos:** campos protegidos por defecto, vista original explícita, exportación protegida, alertas de DNI/RUC contradictorios y descarga de segmentos PDF reales. [Alcance, privacidad y pruebas](https://github.com/PGTEV/Back-End-TP/blob/codex/pmv-hu01-hu04/docs/PMV_INGRESO_PRIVACIDAD_AUDITORIA.md). Esta ampliación no necesita API key.
+
+**Modo universitario:** con ACADEMIC_DEMO=true en el backend, el portal anuncia DEMO UNIVERSITARIA, ofrece ocho PDFs ficticios para descargar, auditoría automática de práctica, modelo sintético y emisión simulada. [Guion y fuente TUPA verificada](https://github.com/PGTEV/Back-End-TP/blob/codex/pmv-hu01-hu04/docs/DEMO_UNIVERSITARIA.md). No requiere claves externas ni constituye una integración municipal real.
+
 Se conserva React/TypeScript y la separación dominio → puertos → casos de uso → adaptadores. La composición real usa `ApiExpedienteAdapter`, `ApiAuthAdapter` y `ApiTupaAdapter`; los adaptadores de demostración siguen disponibles en el código y no se incluyen en la composición real. Se conservan estilos y estructura del portal.
+
+## Ampliación HU01–HU04
+
+La revisión ahora incorpora alertas de faltantes, editor de borradores, historial de versiones, auditoría y destino local con clasificación/asignación manual. Las escrituras usan los endpoints existentes y su revisión optimista; no se sobrescriben cambios concurrentes. El texto sin guardar se conserva ante errores y bloquea una validación simultánea; la recarga explícita descarta los cambios locales.
+
+El botón «Aprobar y Firmar» sigue deshabilitado sin firma, SISGEDOC y notificaciones. La sugerencia del TUPA no se presenta como predicción. No se generan probabilidades ni firmas simuladas. Evaluación por cada escenario, pruebas y dependencias pendientes: [informe PMV del backend](https://github.com/PGTEV/Back-End-TP/blob/codex/pmv-hu01-hu04/docs/PMV_HU01_HU04.md).
 
 ## Ejecutar y verificar
 
@@ -33,7 +43,7 @@ npm run build
 
 `PROCESANDO` se muestra pendiente; `PROCESADO`, procesado; `ILEGIBLE`, `INVALIDO` y `ERROR`, error. Se rechazan estados desconocidos. La confianza OCR no se presenta como verificación humana. La duración es el tiempo observado de la solicitud, no la hora de creación.
 
-El visor y la descarga PDF usan el `File` de la carga con una URL blob, revocada al sustituir el archivo o cerrar sesión. Al consultar un expediente anterior no se inventa una descarga: la API no expone el original. El JSON de extracción sí puede exportarse. El servidor no dispone de un endpoint de previsualización por página.
+El visor completo y su descarga usan el `File` de la carga con una URL blob, revocada al sustituir el archivo o cerrar sesión. Al consultar por ID, se pueden descargar los segmentos originales mediante la ruta implementada `GET /api/expedientes/{id}/documentos/{index}/pdf`, con Bearer y siempre que el original siga en el almacenamiento. La vista previa completa no se recupera automáticamente. El JSON protegido se exporta por defecto; la exportación original requiere mostrar los datos originales y pulsar su acción identificada.
 
 El cliente tiene tiempo límite de 180 segundos y nunca reenvía automáticamente POST. Un fallo de red o timeout no acredita que el servidor haya cancelado o revertido la carga. Conservar el ID cuando esté disponible y consultar antes de volver a cargar. Sin ID ni clave de idempotencia, no se puede resolver automáticamente una respuesta perdida.
 

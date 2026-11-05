@@ -26,4 +26,7 @@ export class InMemoryExpedienteAdapter implements ExpedienteRepositoryPort {
   async confirmData(tramiteId: string, data: any): Promise<void> {
     // mock behavior
   }
+  async getDocumentPdf(): Promise<Blob> {
+    throw new Error('El adaptador de demostración en memoria no conserva PDFs originales.');
+  }
 }

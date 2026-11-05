@@ -20,4 +20,25 @@ export interface Expediente {
   sha256?: string;
   backendStatus?: string;
   error?: string | null;
+  privacy?: DataPrivacy;
+  consistency?: CrossValidation;
+}
+
+export interface DataPrivacy {
+  tecnica?: string;
+  anonimizacion_garantizada?: boolean;
+  transmision_externa_habilitada?: boolean;
+  advertencia?: string;
+  reemplazos_por_tipo?: Record<string, number>;
+  documentos?: { documento: number; tipo: string; paginas: number[]; texto: string; campos: Record<string, string> }[];
+}
+
+export interface CrossValidation {
+  estado: string;
+  requiere_revision_humana: boolean;
+  campos_comparados: string[];
+  fraude_determinado: boolean;
+  advertencia: string;
+  alertas: { codigo: string; campo: string; mensaje: string;
+    fuentes: { documento: number; tipo: string; paginas: number[]; valor_protegido?: string }[] }[];
 }

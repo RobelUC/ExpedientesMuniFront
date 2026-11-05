@@ -6,4 +6,5 @@ export interface ExpedienteRepositoryPort {
   uploadExpediente(file: File): Promise<Expediente>;
   getPagePreview(tramiteId: string, pageNumber: number): Promise<unknown>;
   confirmData(tramiteId: string, data: Expediente): Promise<void>;
+  getDocumentPdf(tramiteId: string, index: number): Promise<Blob>;
 }

@@ -13,4 +13,6 @@ export interface Section {
   icon: string;
   /** Campos de datos extraídos por IA */
   fields: ExtractedField[];
+  maskedFields?: ExtractedField[];
+  documentIndex?: number;
 }

@@ -2,16 +2,19 @@ import React, { useState } from 'react';
 import type { Expediente } from '@domain/entities/Expediente';
 import { ExtractedSection } from './ExtractedSection';
 import { ActionButtons } from './ActionButtons';
+import { CrossValidationPanel } from './CrossValidationPanel';
 
 export interface ExtractedDataPanelProps {
   expediente: Expediente;
   onSave?: () => void;
   onDownload?: () => void;
+  onDownloadOriginal?: () => void;
 }
 
-export function ExtractedDataPanel({ expediente, onSave, onDownload }: ExtractedDataPanelProps) {
+export function ExtractedDataPanel({ expediente, onSave, onDownload, onDownloadOriginal }: ExtractedDataPanelProps) {
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState('');
+  const [showOriginal, setShowOriginal] = useState(false);
 
   const handleCopy = async () => {
     try {
@@ -49,12 +52,23 @@ export function ExtractedDataPanel({ expediente, onSave, onDownload }: Extracted
       </div>
       
       {/* Sections */}
+      <div className="p-3 rounded-lg bg-surface-container-low flex flex-col gap-2">
+        <p className="font-bold">{showOriginal ? 'Datos originales del expediente' : 'Datos protegidos por defecto'}</p>
+        <p className="text-body-sm">Seudonimización parcial de datos detectados. No se envían textos ni PDFs a Gemini o GPT.</p>
+        <button aria-pressed={showOriginal} onClick={() => setShowOriginal(previous => !previous)} className="text-primary underline text-left">
+          {showOriginal ? 'Ocultar datos originales' : 'Mostrar originales (acceso del evaluador)'}
+        </button>
+        {expediente.privacy?.reemplazos_por_tipo && <p className="text-body-sm">Identificadores protegidos: {Object.entries(expediente.privacy.reemplazos_por_tipo).map(([kind, count]) => `${kind}: ${count}`).join(' · ') || 'No se detectaron etiquetas sensibles.'}</p>}
+        {!expediente.privacy && <p className="text-body-sm">La versión protegida no está disponible; los valores se mantienen ocultos hasta que solicite ver los originales.</p>}
+        {showOriginal && onDownloadOriginal && <button onClick={onDownloadOriginal} className="text-primary underline text-left">Exportar JSON original (contiene datos personales)</button>}
+      </div>
       {copyError && <p role="alert" className="text-on-error-container">{copyError}</p>}
       <div className="flex flex-col gap-2">
         {expediente.sections.map((section, i) => (
-          <ExtractedSection key={section.id} section={section} sectionNumber={i + 1} />
+          <ExtractedSection key={section.id} section={{ ...section, fields: showOriginal ? section.fields : section.maskedFields || section.fields.map(field => ({ ...field, value: '[OCULTO]' })) }} sectionNumber={i + 1} />
         ))}
       </div>
+      <CrossValidationPanel report={expediente.consistency} />
       
       {/* Actions */}
       <ActionButtons onSave={onSave!} onDownloadJson={onDownload!} />

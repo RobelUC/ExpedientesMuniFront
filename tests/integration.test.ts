@@ -48,6 +48,10 @@ describe.skipIf(!available)('React adapters → FastAPI real en localhost', () =
     const dossier = await repository.uploadExpediente(file);
     expect(dossier.status).toBe('procesado');
     expect(dossier.sections[0]?.title).toBe('FUT');
+    expect(dossier.privacy?.transmision_externa_habilitada).toBe(false);
+    expect(dossier.sections[0]?.maskedFields?.some(field => field.value === '[DNI_1]')).toBe(true);
+    const segment = await repository.getDocumentPdf(dossier.id, 0);
+    expect((await segment.text()).startsWith('%PDF-')).toBe(true);
     await repository.saveExpediente(dossier);
     expect((await repository.getExpedienteById(dossier.id))?.sha256).toBe(dossier.sha256);
     const tupa = new ApiTupaAdapter(client);
@@ -57,6 +61,25 @@ describe.skipIf(!available)('React adapters → FastAPI real en localhost', () =
     expect(saved.revision).toBe(1);
     expect(saved.validation.estado).toBe('PENDIENTE_REVISION');
     await expect(tupa.validate(dossier.id, catalog.procedimientos[0]!.code, 0, {})).rejects.toThrow('versión');
+    const procedure = catalog.procedimientos.find(p => p.code === 'PA12115285')!;
+    const checks = Object.fromEntries(procedure.requirements.map(r => [r.id, {
+      estado: 'CUMPLE' as const, nota: 'Revisión ficticia del test; sin efectos legales.', paginas: [],
+    }]));
+    const conform = await tupa.validate(dossier.id, procedure.code, saved.revision, checks);
+    expect(conform.validation.estado).toBe('CONFORME');
+    const draft1 = await tupa.saveDraft(dossier.id, 'Proyecto de prueba', conform.revision);
+    const draft2 = await tupa.saveDraft(dossier.id, 'Proyecto corregido', draft1.revision);
+    expect(draft2.drafts).toHaveLength(2);
+    expect(draft2.drafts?.[0]?.contenido).toBe('Proyecto de prueba');
+    expect(draft2.audit?.at(-1)?.detail.version).toBe(2);
+    const routed = await tupa.route(dossier.id, draft2.revision);
+    expect(routed.routing?.estado).toBe('CLASIFICACION_MANUAL');
+    expect(routed.routing?.confianza).toBeNull();
+    const assigned = await tupa.assign(dossier.id, procedure.department, routed.revision);
+    expect(assigned.routing?.destino).toBe(procedure.department);
+    await expect(tupa.approveAndSign(dossier.id, assigned.revision)).rejects.toThrow('no configurados');
+    expect((await tupa.getWorkflow(dossier.id)).revision).toBe(assigned.revision);
+    await expect(tupa.saveDraft(dossier.id, 'Edición obsoleta', conform.revision)).rejects.toThrow('versión');
     const preflight = await fetch(`${base}/api/expedientes`, { method: 'OPTIONS', headers: {
       Origin: 'https://municipal-test.vercel.app', 'Access-Control-Request-Method': 'POST',
       'Access-Control-Request-Headers': 'authorization,content-type',

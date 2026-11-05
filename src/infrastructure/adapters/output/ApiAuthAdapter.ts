@@ -7,7 +7,7 @@ export class ApiAuthAdapter implements AuthRepositoryPort {
   constructor(private readonly client: ApiClient = apiClient) {}
   async login(username: string, token: string): Promise<User> {
     this.client.setToken('');
-    let capabilities: { seguridad?: { expedientes_protegidos: boolean } };
+    let capabilities: { demo?: boolean; seguridad?: { expedientes_protegidos: boolean } };
     try { capabilities = await this.client.request('/capacidades'); }
     catch (error) {
       if (error instanceof ApiError && error.status === 404) throw new Error('El servidor no ofrece el contrato compatible. Solicite al administrador revisar la aplicación desplegada.');
@@ -19,7 +19,8 @@ export class ApiAuthAdapter implements AuthRepositoryPort {
     this.client.setToken(token.trim());
     try {
       await this.client.request('/tupa/procedimientos');
-      return { name: username.trim(), role: 'Evaluador · acceso de prototipo' };
+      return { name: username.trim(), demo: capabilities.demo === true,
+        role: capabilities.demo ? 'Evaluador · demostración universitaria' : 'Evaluador · acceso de prototipo' };
     } catch (error) { this.client.setToken(''); throw error; }
   }
   async logout(): Promise<void> { this.client.setToken(''); }

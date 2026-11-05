@@ -16,6 +16,8 @@ import { GetExpedienteUseCase } from '@application/useCases/GetExpedienteUseCase
 import { UploadExpedienteUseCase } from '@application/useCases/UploadExpedienteUseCase';
 import { ConfirmExpedienteUseCase } from '@application/useCases/ConfirmExpedienteUseCase';
 import { DownloadJsonUseCase } from '@application/useCases/DownloadJsonUseCase';
+import { CreateProtectedExportUseCase } from '@application/useCases/CreateProtectedExportUseCase';
+import { DownloadDocumentUseCase } from '@application/useCases/DownloadDocumentUseCase';
 import { LoginUseCase } from '@application/useCases/LoginUseCase';
 
 // Inicializar dependencias (DI Container simple)
@@ -27,6 +29,8 @@ const getExpedienteUseCase = new GetExpedienteUseCase(apiAdapter);
 const uploadExpedienteUseCase = new UploadExpedienteUseCase(apiAdapter);
 const confirmExpedienteUseCase = new ConfirmExpedienteUseCase(apiAdapter);
 const downloadJsonUseCase = new DownloadJsonUseCase();
+const protectedExport = new CreateProtectedExportUseCase();
+const downloadDocument = new DownloadDocumentUseCase(apiAdapter);
 const loginUseCase = new LoginUseCase(authAdapter);
 
 export default function App() {
@@ -89,7 +93,7 @@ export default function App() {
 
   const handleDownload = () => {
     if (!expediente) return;
-    downloadJsonUseCase.execute(expediente.id, expediente);
+    downloadJsonUseCase.execute(expediente.id, protectedExport.execute(expediente));
   };
 
   const handleQuery = async (event: React.FormEvent) => {
@@ -100,7 +104,7 @@ export default function App() {
       const result = await getExpedienteUseCase.execute(queryId.trim());
       if (!result) throw new Error('Expediente no encontrado.');
       setExpediente(result); setPdfFile(null);
-      setMessage('Expediente recuperado de la base de datos. El backend no expone una descarga del PDF original.');
+      setMessage('Expediente recuperado de la base de datos. Puede descargar los segmentos originales disponibles en el almacenamiento.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Error al consultar'); }
     finally { busy.current = false; setLoading(false); }
   };
@@ -114,6 +118,10 @@ export default function App() {
       <button className="text-primary underline mt-2" onClick={async () => {
         await authAdapter.logout(); setUser(null); setExpediente(null); setPdfFile(null); setError(null); setMessage(null);
       }} disabled={loading}>Cerrar sesión</button>
+      {user.demo && <div role="status" className="p-4 mt-3 rounded-lg bg-tertiary-fixed/30 text-on-tertiary-container">
+        <strong>DEMO UNIVERSITARIA — datos ficticios y servicios simulados, sin validez legal.</strong>
+        <a href="/ejemplos-demo.zip" download className="block underline mt-2">Descargar paquete de expedientes ficticios (ZIP)</a>
+      </div>}
       <div className="flex flex-col w-full gap-4 pt-4">
         {/* ── Page heading ── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pb-2 border-b border-surface-container-high">
@@ -163,13 +171,16 @@ export default function App() {
             {/* ── Main grid: Viewer + Extracted Data ── */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               <div className="lg:col-span-7 flex flex-col gap-4">
-                <DocumentViewer key={expediente.id} expediente={expediente} pdfUrl={pdfUrl} />
+                <DocumentViewer key={expediente.id} expediente={expediente} pdfUrl={pdfUrl}
+                  onDownloadSegment={index => downloadDocument.execute(expediente.id, index)} />
               </div>
               <div className="lg:col-span-5 flex flex-col gap-4">
                 <ExtractedDataPanel 
+                  key={expediente.id}
                   expediente={expediente} 
                   onSave={handleSave} 
                   onDownload={handleDownload} 
+                  onDownloadOriginal={() => downloadJsonUseCase.execute(expediente.id, expediente)}
                 />
                 <TupaPanel key={expediente.id} expediente={expediente} service={tupaUseCases} />
               </div>
