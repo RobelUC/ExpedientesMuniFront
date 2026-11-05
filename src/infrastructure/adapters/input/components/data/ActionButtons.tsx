@@ -13,7 +13,7 @@ export function ActionButtons({ onSave, onDownloadJson }: ActionButtonsProps) {
         className="flex-1 inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-on-primary py-3 px-6 rounded-xl font-label-lg font-bold shadow-md hover:shadow-lg transition-all"
       >
         <span className="material-symbols-outlined text-[20px]">cloud_upload</span>
-        <span>Guardar en Base de Datos</span>
+        <span>Verificar guardado en BD</span>
       </button>
       <button
         onClick={onDownloadJson}

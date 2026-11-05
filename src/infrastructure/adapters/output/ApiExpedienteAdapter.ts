@@ -1,101 +1,59 @@
-import type { Expediente } from '@domain/entities/Expediente';
-import type { Section } from '@domain/entities/Section';
-import type { ExtractedField } from '@domain/valueObjects/ExtractedField';
+import type { Expediente, ExpedienteStatus } from '@domain/entities/Expediente';
 import type { ExpedienteRepositoryPort } from '@domain/ports/ExpedienteRepositoryPort';
+import type { DossierResponse } from './ApiContracts';
+import { apiClient, ApiError, type ApiClient } from './ApiClient';
 
-// @ts-ignore - Evita errores de tipado con import.meta.env en algunos setups de tsconfig
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://127.0.0.1:8000/api';
+export function mapDossier(data: DossierResponse): Expediente {
+  if (!data || typeof data.id !== 'string' || typeof data.sha256 !== 'string' || !Array.isArray(data.documentos)) {
+    throw new Error('Respuesta de expediente incompatible con el contrato esperado.');
+  }
+  const statuses: Record<string, ExpedienteStatus> = {
+    PROCESANDO: 'pendiente', PROCESADO: 'procesado', ILEGIBLE: 'error', INVALIDO: 'error', ERROR: 'error',
+  };
+  const status = statuses[data.estado];
+  if (!status) throw new Error(`Estado de expediente no reconocido: ${data.estado}`);
+  return {
+    id: data.id, sha256: data.sha256, fileName: data.nombre_archivo, fileSize: 'No informado',
+    status, backendStatus: data.estado, error: data.error, processingTime: '',
+    totalPages: Math.max(0, ...data.documentos.flatMap(doc => doc.paginas)),
+    sections: data.documentos.map((doc, index) => ({
+      id: `${data.id}-sec-${index}`, title: doc.tipo,
+      subtitle: `${doc.metodo_extraccion} · confianza OCR ${(doc.confianza_ocr * 100).toFixed(1)}%${doc.requiere_revision ? ' · requiere revisión' : ''}`,
+      pageRange: [Math.min(...doc.paginas), Math.max(...doc.paginas)],
+      icon: ({ FUT: 'article', DNI: 'badge', PLANO: 'map' } as Record<string, string>)[doc.tipo] || 'description',
+      fields: Object.entries(doc.campos).map(([key, value]) => ({
+        label: key.charAt(0).toUpperCase() + key.slice(1).replaceAll('_', ' '), value,
+        isCode: key === 'dni' || key === 'ruc', isVerified: false,
+      })),
+    })),
+  };
+}
 
 export class ApiExpedienteAdapter implements ExpedienteRepositoryPort {
-  
+  constructor(private readonly client: ApiClient = apiClient) {}
   async getExpedienteById(id: string): Promise<Expediente | null> {
-    const response = await fetch(`${API_BASE_URL}/expedientes/${id}`);
-    if (!response.ok) {
-      if (response.status === 404) return null;
-      throw new Error('Error al cargar el expediente desde el backend de Python.');
-    }
-    const data = await response.json();
-    return this.mapPythonResponseToDomain(data);
+    try { return mapDossier(await this.client.request<DossierResponse>(`/expedientes/${encodeURIComponent(id)}`)); }
+    catch (error) { if (error instanceof ApiError && error.status === 404) return null; throw error; }
   }
-
-  async saveExpediente(expediente: Expediente): Promise<void> {
-    await this.confirmData(expediente.id, expediente);
-  }
-
   async uploadExpediente(file: File): Promise<Expediente> {
+    if (!file.name.toLowerCase().endsWith('.pdf') || file.size === 0) throw new Error('Seleccione un PDF no vacío.');
     const formData = new FormData();
     formData.append('archivo', file);
-
-    const response = await fetch(`${API_BASE_URL}/expedientes`, {
-      method: 'POST',
-      body: formData,
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => null);
-      const errorMessage = errorData?.detail?.mensaje || 'Error al subir el archivo al backend.';
-      throw new Error(errorMessage);
+    const start = performance.now();
+    const dossier = mapDossier(await this.client.request<DossierResponse>('/expedientes', { method: 'POST', body: formData }));
+    return { ...dossier, fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`, processingTime: `${((performance.now() - start) / 1000).toFixed(1)} s` };
+  }
+  async saveExpediente(expediente: Expediente): Promise<void> { await this.confirmData(expediente.id, expediente); }
+  async confirmData(id: string, data: Expediente): Promise<void> {
+    // POST ya escribió en BD. No existe endpoint de edición/confirmación de campos.
+    const saved = await this.getExpedienteById(id);
+    if (!saved) throw new Error('El expediente no se encontró en la base de datos.');
+    if (saved.id !== data.id || saved.sha256 !== data.sha256 || saved.status !== 'procesado' ||
+        JSON.stringify(saved.sections) !== JSON.stringify(data.sections)) {
+      throw new Error('La copia persistida no coincide o no está procesada. La API no admite guardar ediciones de campos.');
     }
-    
-    const data = await response.json();
-    return this.mapPythonResponseToDomain(data);
   }
-
-  async getPagePreview(tramiteId: string, numPagina: number): Promise<any> {
-    return { imageUrl: '' };
-  }
-
-  async confirmData(tramiteId: string, datosEstructurados: any): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log(`[Mock] Datos confirmados para el trámite ${tramiteId}`);
-        resolve();
-      }, 500);
-    });
-  }
-
-  private mapPythonResponseToDomain(apiData: any): Expediente {
-    let totalPages = 0;
-
-    const mappedSections: Section[] = (apiData.documentos || []).map((doc: any, index: number) => {
-      
-      const fields: ExtractedField[] = Object.entries(doc.campos || {}).map(([key, value]) => ({
-        label: key.charAt(0).toUpperCase() + key.slice(1).replace('_', ' '),
-        value: String(value),
-        isCode: key === 'dni' || key === 'ruc',
-        isVerified: doc.confianza_ocr > 0.9,
-      }));
-
-      const startPage = doc.paginas && doc.paginas.length > 0 ? doc.paginas[0] : 1;
-      const endPage = doc.paginas && doc.paginas.length > 0 ? doc.paginas[doc.paginas.length - 1] : 1;
-      
-      if (endPage > totalPages) {
-        totalPages = endPage;
-      }
-
-      let icon = 'description';
-      if (doc.tipo === 'FUT') icon = 'article';
-      if (doc.tipo === 'DNI') icon = 'badge';
-      if (doc.tipo === 'PLANO') icon = 'map';
-
-      return {
-        id: `sec-${index}-${Date.now()}`,
-        title: doc.tipo,
-        subtitle: `Extraído vía ${doc.metodo_extraccion || 'OCR'}`,
-        pageRange: [startPage, endPage],
-        icon: icon,
-        fields: fields,
-      };
-    });
-
-    return {
-      id: apiData.id,
-      status: apiData.estado === 'PROCESANDO' ? 'procesado' : 'procesado',
-      fileName: apiData.nombre_archivo || 'Documento PDF',
-      fileSize: 'N/A',
-      totalPages: totalPages,
-      processingTime: apiData.creado_en ? new Date(apiData.creado_en).toLocaleTimeString('es-PE') : 'Automático',
-      sections: mappedSections,
-    };
+  async getPagePreview(): Promise<never> {
+    throw new Error('La API no expone el PDF original. Use el archivo cargado para previsualizarlo.');
   }
 }

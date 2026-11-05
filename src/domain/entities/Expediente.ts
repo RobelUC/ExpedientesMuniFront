@@ -17,4 +17,7 @@ export interface Expediente {
   status: ExpedienteStatus;
   /** Tiempo de procesamiento legible (ej. "2.4s") */
   processingTime: string;
+  sha256?: string;
+  backendStatus?: string;
+  error?: string | null;
 }
