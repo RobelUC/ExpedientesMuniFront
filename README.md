@@ -64,6 +64,8 @@ Publicar el backend y configurar las credenciales antes de fusionar este fronten
 No se han desplegado estos cambios ni se ha verificado el dominio activo. La prueba HTTP local no sustituye comprobar la configuración real del proveedor. El token compartido es un mecanismo de prototipo; ver la propuesta de identidad individual del backend antes de usar expedientes reales.
 # Borradores con GPT
 
+La revisión incluye **Analizar requisitos con Gemini**, disponible tras guardar la revisión TUPA si el backend anuncia ia_generativa.auditoria_tupa=true. Muestra hallazgos, páginas candidatas y procedencia sin enviar PDFs/OCR ni datos personales. La correspondencia automática local aparece en el detalle Cruce automático de categorías con requisitos TUPA. No sustituye la verificación de contenido, firmas o pagos.
+
 También se admite Gemini: el botón y el modelo mostrado cambian según `/api/capacidades`. Configurar AI_PROVIDER=gemini, GEMINI_ENABLED=true, GEMINI_API_KEY y GEMINI_MODEL exclusivamente en Render; ver `docs/GEMINI.md` del backend. Se conserva el endpoint autenticado de generación y el soporte OpenAI. El botón explica bloqueos por cambios sin guardar o por emisión previa del expediente.
 
 La revisión técnica incluye **Generar borrador con GPT**, habilitado cuando el backend anuncia `ia_generativa.configurada=true`. Genera una versión con procedencia OpenAI y permite revisarla/editarla con el historial existente. No sobrescribe cambios locales sin guardar. Configurar OPENAI_ENABLED, OPENAI_API_KEY y OPENAI_MODEL exclusivamente en Render según `docs/OPENAI.md` del backend; nunca usar una variable VITE para secretos. Desplegar primero el backend que implementa `POST /api/expedientes/{id}/borradores/ia`.

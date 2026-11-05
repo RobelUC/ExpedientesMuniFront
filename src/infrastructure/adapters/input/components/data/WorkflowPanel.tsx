@@ -17,6 +17,7 @@ interface Props {
 const actions: Record<string, string> = {
   VALIDACION_TUPA: 'Validación TUPA', VERSION_BORRADOR: 'Edición del borrador',
   BORRADOR_IA: 'Generación con IA',
+  AUDITORIA_IA: 'Auditoría de evidencias con IA',
   ENRUTAMIENTO: 'Evaluación de destino', ASIGNACION_MANUAL: 'Asignación manual',
 };
 

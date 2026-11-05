@@ -124,6 +124,14 @@ describe('persistencia y autenticación', () => {
 });
 
 describe('TUPA', () => {
+  it('solicita auditoría mediante el endpoint implementado, sin texto ni documentos en el cuerpo', async () => {
+    client.setToken('token-prueba');
+    fetchMock.mockResolvedValue(reply({ revision: 2 }, 201));
+    await new TupaUseCases(new ApiTupaAdapter(client)).auditWithAI('id', 1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://api.example/api/expedientes/id/auditoria/ia');
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ revision: 1 });
+    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get('Authorization')).toBe('Bearer token-prueba');
+  });
   it('genera con GPT mediante POST autenticado y revisión, sin reenviar el expediente', async () => {
     client.setToken('token-prueba');
     fetchMock.mockResolvedValue(reply({ revision: 2 }, 201));

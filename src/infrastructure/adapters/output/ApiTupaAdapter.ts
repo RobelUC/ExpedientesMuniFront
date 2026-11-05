@@ -21,6 +21,7 @@ export class ApiTupaAdapter implements TupaRepositoryPort {
   saveDraft(id: string, content: string, revision: number) { return this.post(id, 'borradores', { contenido: content, revision }); }
   route(id: string, revision: number) { return this.post(id, 'enrutamiento', { revision }); }
   generateDraft(id: string, revision: number) { return this.post(id, 'borradores/ia', { revision }); }
+  auditWithAI(id: string, revision: number) { return this.post(id, 'auditoria/ia', { revision }); }
   assign(id: string, department: string, revision: number) { return this.post(id, 'asignacion', { destino: department, revision }); }
   approveAndSign(id: string, revision: number) { return this.post(id, 'aprobar-firmar', { revision }); }
 }
