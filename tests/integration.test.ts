@@ -8,7 +8,7 @@ import { ApiAuthAdapter } from '../src/infrastructure/adapters/output/ApiAuthAda
 import { ApiExpedienteAdapter } from '../src/infrastructure/adapters/output/ApiExpedienteAdapter';
 import { ApiTupaAdapter } from '../src/infrastructure/adapters/output/ApiTupaAdapter';
 
-const backend = path.resolve('../backend');
+const backend = path.resolve(process.env.BACKEND_ROOT || '../backend-render');
 const python = process.env.BACKEND_PYTHON || path.join(backend, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 const available = existsSync(python) && existsSync(path.join(backend, 'tests/support_frontend_server.py'));
 let child: ChildProcess | undefined;

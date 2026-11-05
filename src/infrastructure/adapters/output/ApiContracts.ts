@@ -15,4 +15,3 @@ export interface DossierResponse {
     requiere_revision: boolean;
   }[];
 }
-

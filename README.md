@@ -20,7 +20,7 @@ npm run lint
 npm run build
 ```
 
-`tests/integration.test.ts` conecta los adaptadores con un proceso FastAPI real, un PDF sintético y almacenamiento temporal. Se ejecuta si el backend está junto a este repositorio en `../backend` con `.venv`; también se puede establecer `BACKEND_PYTHON` con la ruta de su intérprete. Sin ese entorno se omite esa prueba y siguen ejecutándose las pruebas unitarias y de componentes. No usa Vercel/Render, datos reales ni claves reales. Las pruebas del visor comprueban el enlace al PDF y controles; la visualización, páginas y zoom dependen del visor PDF nativo del navegador. Se ofrece enlace alternativo de apertura.
+`tests/integration.test.ts` conecta los adaptadores con un proceso FastAPI real, un PDF sintético y almacenamiento temporal. Se ejecuta si el backend correcto está junto a este repositorio en `../backend-render` con `.venv`; también se puede establecer `BACKEND_ROOT` con su carpeta y `BACKEND_PYTHON` con la ruta de su intérprete. Sin ese entorno se omite esa prueba y siguen ejecutándose las pruebas unitarias y de componentes. No usa Vercel/Render, datos reales ni claves reales. Las pruebas del visor comprueban el enlace al PDF y controles; la visualización, páginas y zoom dependen del visor PDF nativo del navegador. Se ofrece enlace alternativo de apertura.
 
 ## Contratos realmente utilizados
 
@@ -39,15 +39,15 @@ El cliente tiene tiempo límite de 180 segundos y nunca reenvía automáticament
 
 ## Vercel
 
-### Cambios del backend para el mantenedor
+### Backend compatible
 
-La cuenta conectada tiene lectura, pero no escritura, en `Andree250/Back-End-TP02`. Se incluye el commit del backend como [parche Git](docs/0001-fix-protect-dossier-API-and-verify-React-integration.patch). El mantenedor puede aplicarlo con `git am` desde una rama basada en `97bb6d0b22ba5550a1dba690b0efc20cdc18f537`, revisar las diferencias y ejecutar pytest. El parche incluye las pruebas de contrato, la protección configurable y su guía DEPLOYMENT.md; no contiene credenciales reales. El commit local de referencia es `d359ee5`.
+El repositorio correcto es [PGTEV/Back-End-TP](https://github.com/PGTEV/Back-End-TP). Consultar su guía [DEPLOYMENT.md](https://github.com/PGTEV/Back-End-TP/blob/codex/integracion-segura-react/DEPLOYMENT.md). La referencia inicial a Andree250/Back-End-TP02 correspondía a otro repositorio; se retiró su parche de esta integración. El backend correcto conserva Supabase y los diagnósticos existentes `/health/db` y `/health/ia`.
 
 Publicar el backend y configurar las credenciales antes de fusionar este frontend en producción: el nuevo acceso rechaza servidores que todavía no anuncien la protección de expedientes. La prueba HTTP de frontend se ejecuta con ambos repositorios locales instalados; en un checkout independiente sin backend se omite únicamente esa prueba.
 
-1. Publicar primero los cambios del backend y configurar su arranque como se indica en `../backend/DEPLOYMENT.md`. `src.main:app` es otra aplicación y no ofrece el contrato compatible.
+1. Publicar primero los cambios de PGTEV/Back-End-TP y configurar su arranque mediante `src.infrastructure.main:create_app --factory`, como indica su guía DEPLOYMENT.md.
 2. En el proyecto de Vercel seleccionar Vite, instalación `npm ci`, build `npm run build`, salida `dist`, Node 24. En el repositorio independiente la raíz es `.`; en esta copia de trabajo es `frontend`.
-3. Establecer `VITE_API_URL=https://SU-SERVICIO.onrender.com/api` con el dominio real. Se admite también el origen sin `/api`; el adaptador lo normaliza. En producción debe ser HTTPS y no contener credenciales ni parámetros. Si falta, se muestra un error de configuración al usar la API, sin recurrir a localhost.
+3. Establecer `VITE_API_URL=https://back-end-tp.onrender.com/api`. Se admite también el origen sin `/api`; el adaptador lo normaliza. En producción debe ser HTTPS y no contener credenciales ni parámetros. Si falta, se muestra un error de configuración al usar la API, sin recurrir a localhost.
 4. Aplicar la variable a Production y a los entornos Preview que se vayan a usar, y volver a compilar/desplegar. Las variables VITE se sustituyen durante el build y son públicas: nunca poner tokens o contraseñas en ellas. [Documentación de Vite](https://vite.dev/guide/env-and-mode), [Vite en Vercel](https://vercel.com/docs/frameworks/frontend/vite).
 5. Configurar en Render el origen exacto del frontend en `CORS_ORIGINS`. Una URL Preview tiene otro origen y requiere una entrada explícita. No habilitar todas las cuentas de `vercel.app` mediante comodín.
 
