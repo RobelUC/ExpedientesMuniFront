@@ -80,7 +80,6 @@ export function TupaPanel({ expediente, service }: Props) {
 
   return <section className="bg-surface-container-lowest border border-surface-container-high rounded-xl p-4 flex flex-col gap-3">
     <h2 className="font-headline-sm text-primary font-bold">Revisión documental TUPA</h2>
-    {(capabilities?.demo || flow?.demo) && <div role="status" className="bg-tertiary-fixed/30 text-on-tertiary-container p-3 rounded-lg font-bold">DEMO UNIVERSITARIA: expedientes ficticios, auditoría de evidencias de práctica y servicios simulados. Sin validez legal.</div>}
     <p className="text-body-sm text-on-surface-variant">Catálogo piloto. Vigencia normativa no certificada. OCR no verifica firmas, pagos ni validez legal.</p>
     {loading && <p role="status">Cargando revisión...</p>}
     {error && <p role="alert" className="text-on-error-container bg-error-container p-3 rounded">{error}</p>}
@@ -125,6 +124,7 @@ export function TupaPanel({ expediente, service }: Props) {
     {flow?.validation.advertencia && <p className="text-body-sm">{flow.validation.advertencia}</p>}
     {flow && catalog && <WorkflowPanel key={refreshToken} flow={flow} catalog={catalog} capabilities={capabilities} disabled={loading} validationDirty={dirty}
       onDraftDirtyChange={setDraftDirty}
+      onGenerateDraft={() => run(revision => service.generateDraft(expediente.id, revision), 'Borrador generado con OpenAI y guardado. Revise su contenido antes de aprobarlo.')}
       onSaveDraft={content => run(revision => service.saveDraft(expediente.id, content, revision), 'Nueva versión guardada con auditoría.')}
       onRoute={() => run(revision => service.route(expediente.id, revision), 'Destino local actualizado.')}
       onAssign={department => run(revision => service.assign(expediente.id, department, revision), 'Asignación manual guardada en el flujo local.')}

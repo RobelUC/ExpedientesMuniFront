@@ -8,6 +8,7 @@ interface Props {
   disabled: boolean;
   validationDirty: boolean;
   onSaveDraft: (content: string) => Promise<void>;
+  onGenerateDraft?: () => Promise<void>;
   onRoute: () => Promise<void>;
   onAssign: (department: string) => Promise<void>;
   onApprove: () => Promise<void>;
@@ -15,10 +16,11 @@ interface Props {
 }
 const actions: Record<string, string> = {
   VALIDACION_TUPA: 'Validación TUPA', VERSION_BORRADOR: 'Edición del borrador',
+  BORRADOR_IA: 'Generación con OpenAI',
   ENRUTAMIENTO: 'Evaluación de destino', ASIGNACION_MANUAL: 'Asignación manual',
 };
 
-export function WorkflowPanel({ flow, catalog, capabilities, disabled, validationDirty, onSaveDraft, onRoute, onAssign, onApprove, onDraftDirtyChange }: Props) {
+export function WorkflowPanel({ flow, catalog, capabilities, disabled, validationDirty, onSaveDraft, onGenerateDraft, onRoute, onAssign, onApprove, onDraftDirtyChange }: Props) {
   const latest = flow.drafts?.at(-1);
   const [content, setContent] = useState(latest?.contenido || '');
   const procedure = catalog.procedimientos.find(p => p.code === flow.procedure_code);
@@ -42,7 +44,13 @@ export function WorkflowPanel({ flow, catalog, capabilities, disabled, validatio
     {validationDirty && <p role="status" className="text-body-sm">Guarde la validación TUPA antes de modificar el borrador o el destino.</p>}
     <section className="flex flex-col gap-2" aria-label="Borradores y revisión técnica">
       <h3 className="font-headline-sm text-primary font-bold">Borrador y revisión técnica</h3>
-      <p className="text-body-sm text-on-surface-variant">{demo ? 'Proyecto generado por plantilla académica a partir de la auditoría de evidencias ficticias. Sin validez administrativa.' : 'Las observaciones se generan por plantilla local. El borrador requiere revisión técnica; todavía no existe generación de resoluciones mediante IA.'}</p>
+      <button onClick={onGenerateDraft} disabled={locked || draftChanged || !flow.validation.estado || !capabilities?.ia_generativa?.configurada || !onGenerateDraft}
+        className="bg-primary text-on-primary rounded-xl p-3 font-bold disabled:opacity-50">Generar borrador con GPT</button>
+      <p className="text-body-sm text-on-surface-variant">{capabilities?.ia_generativa?.configurada
+        ? `OpenAI · ${capabilities.ia_generativa.modelo}. Se enviarán requisitos públicos y estados de revisión, sin PDF ni texto OCR. Cada generación usa la API.`
+        : 'Para generar con GPT, configure OpenAI en el backend de Render.'}</p>
+      {latest?.ia && <p className="text-body-sm">Generado por {latest.ia.proveedor} · modelo {latest.ia.modelo} · referencia {latest.ia.respuesta_id}. Requiere revisión humana.</p>}
+      <p className="text-body-sm text-on-surface-variant">El origen de cada versión indica si proviene de una plantilla, de GPT o de una edición humana. Revise el contenido y el sustento documental antes de continuar.</p>
       {latest && <p className="text-body-sm">Versión {latest.version} · {latest.tipo} · {latest.vigente ? 'Vigente' : 'Requiere nueva revisión'} · {latest.origen}</p>}
       <label className="flex flex-col gap-1">Contenido del borrador
         <textarea aria-label="Contenido del borrador" rows={10} maxLength={100000} value={content}

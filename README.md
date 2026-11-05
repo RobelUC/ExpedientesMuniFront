@@ -2,7 +2,7 @@
 
 **Ingreso y cruce de anexos:** campos protegidos por defecto, vista original explícita, exportación protegida, alertas de DNI/RUC contradictorios y descarga de segmentos PDF reales. [Alcance, privacidad y pruebas](https://github.com/PGTEV/Back-End-TP/blob/codex/pmv-hu01-hu04/docs/PMV_INGRESO_PRIVACIDAD_AUDITORIA.md). Esta ampliación no necesita API key.
 
-**Modo universitario:** con ACADEMIC_DEMO=true en el backend, el portal anuncia DEMO UNIVERSITARIA, ofrece ocho PDFs ficticios para descargar, auditoría automática de práctica, modelo sintético y emisión simulada. [Guion y fuente TUPA verificada](https://github.com/PGTEV/Back-End-TP/blob/codex/pmv-hu01-hu04/docs/DEMO_UNIVERSITARIA.md). No requiere claves externas ni constituye una integración municipal real.
+**Modo universitario:** con ACADEMIC_DEMO=true en el backend, el portal ofrece ocho PDFs ficticios para descargar, auditoría automática de práctica, modelo sintético y emisión simulada. Las acciones y los comprobantes identifican las simulaciones, sin banners globales repetidos. [Guion y fuente TUPA verificada](https://github.com/PGTEV/Back-End-TP/blob/codex/pmv-hu01-hu04/docs/DEMO_UNIVERSITARIA.md). No requiere claves externas ni constituye una integración municipal real.
 
 Se conserva React/TypeScript y la separación dominio → puertos → casos de uso → adaptadores. La composición real usa `ApiExpedienteAdapter`, `ApiAuthAdapter` y `ApiTupaAdapter`; los adaptadores de demostración siguen disponibles en el código y no se incluyen en la composición real. Se conservan estilos y estructura del portal.
 
@@ -62,3 +62,6 @@ Publicar el backend y configurar las credenciales antes de fusionar este fronten
 5. Configurar en Render el origen exacto del frontend en `CORS_ORIGINS`. Una URL Preview tiene otro origen y requiere una entrada explícita. No habilitar todas las cuentas de `vercel.app` mediante comodín.
 
 No se han desplegado estos cambios ni se ha verificado el dominio activo. La prueba HTTP local no sustituye comprobar la configuración real del proveedor. El token compartido es un mecanismo de prototipo; ver la propuesta de identidad individual del backend antes de usar expedientes reales.
+# Borradores con GPT
+
+La revisión técnica incluye **Generar borrador con GPT**, habilitado cuando el backend anuncia `ia_generativa.configurada=true`. Genera una versión con procedencia OpenAI y permite revisarla/editarla con el historial existente. No sobrescribe cambios locales sin guardar. Configurar OPENAI_ENABLED, OPENAI_API_KEY y OPENAI_MODEL exclusivamente en Render según `docs/OPENAI.md` del backend; nunca usar una variable VITE para secretos. Desplegar primero el backend que implementa `POST /api/expedientes/{id}/borradores/ia`.

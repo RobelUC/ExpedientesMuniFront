@@ -20,6 +20,7 @@ export class TupaUseCases {
     return this.repository.saveDraft(id, content, revision);
   }
   route(id: string, revision: number) { return this.repository.route(id, revision); }
+  generateDraft(id: string, revision: number) { return this.repository.generateDraft(id, revision); }
   assign(id: string, department: string, revision: number) {
     if (!department.trim()) throw new Error('Seleccione una gerencia de destino.');
     return this.repository.assign(id, department, revision);

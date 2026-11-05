@@ -25,7 +25,7 @@ beforeEach(() => {
   repository = {
     getCatalog: vi.fn().mockResolvedValue(catalog), getWorkflow: vi.fn().mockResolvedValue(structuredClone(initial)),
     getCapabilities: vi.fn().mockResolvedValue({ integraciones: { firma_electronica: false, sisgedoc: false, notificaciones: false, enrutamiento_predictivo: false } }),
-    validate: vi.fn(), saveDraft: vi.fn(), route: vi.fn(), assign: vi.fn(), approveAndSign: vi.fn(),
+    validate: vi.fn(), saveDraft: vi.fn(), generateDraft: vi.fn(), route: vi.fn(), assign: vi.fn(), approveAndSign: vi.fn(),
   };
   service = new TupaUseCases(repository);
 });
@@ -39,6 +39,34 @@ async function open() {
 const disabled = (name: string) => (screen.getByRole('button', { name }) as HTMLButtonElement).disabled;
 
 describe('HU03: edición y auditoría reales desde la interfaz', () => {
+  it('genera con GPT y muestra procedencia, conservando edición y revisión humana', async () => {
+    vi.mocked(repository.getCapabilities).mockResolvedValue({ ia_generativa: { configurada: true, proveedor: 'OPENAI', modelo: 'modelo-test' } });
+    const generated = { ...draft(1, 'Proyecto generado por GPT'), origen: 'OPENAI',
+      ia: { proveedor: 'OPENAI', modelo: 'modelo-test', respuesta_id: 'resp_test', version_prompt: 'V1' } };
+    vi.mocked(repository.generateDraft).mockResolvedValue({ ...initial, revision: 2, drafts: [generated] });
+    const user = await open();
+    await user.click(screen.getByRole('button', { name: 'Generar borrador con GPT' }));
+    await screen.findByText(/Generado por OPENAI/);
+    expect(repository.generateDraft).toHaveBeenCalledWith('id-prueba', 1);
+    const editor = screen.getByRole('textbox', { name: 'Contenido del borrador' });
+    expect((editor as HTMLTextAreaElement).value).toBe('Proyecto generado por GPT');
+    await user.type(editor, ' corrección');
+    expect(disabled('Generar borrador con GPT')).toBe(true);
+    expect(disabled('Guardar nueva versión del borrador')).toBe(false);
+  });
+
+  it('deshabilita GPT sin configurar y conserva el borrador cuando falla el proveedor', async () => {
+    vi.mocked(repository.getWorkflow).mockResolvedValue({ ...initial, drafts: [draft(1, 'Versión anterior')] });
+    const user = await open();
+    expect(disabled('Generar borrador con GPT')).toBe(true);
+    vi.mocked(repository.getCapabilities).mockResolvedValue({ ia_generativa: { configurada: true, proveedor: 'OPENAI', modelo: 'modelo-test' } });
+    await user.click(screen.getByRole('button', { name: 'Recargar catálogo y revisión guardada (descarta cambios locales)' }));
+    await waitFor(() => expect(disabled('Generar borrador con GPT')).toBe(false));
+    vi.mocked(repository.generateDraft).mockRejectedValue(new Error('Cuota de OpenAI agotada'));
+    await user.click(screen.getByRole('button', { name: 'Generar borrador con GPT' }));
+    await screen.findByRole('alert');
+    expect((screen.getByRole('textbox', { name: 'Contenido del borrador' }) as HTMLTextAreaElement).value).toBe('Versión anterior');
+  });
   it('conserva versiones y usa la revisión devuelta por el servidor en cada guardado', async () => {
     const version1: Workflow = { ...initial, revision: 2, drafts: [draft(1, 'Proyecto inicial')], audit: [
       { actor: 'evaluador-prueba', action: 'VERSION_BORRADOR', at: '2026-11-04T10:00:00Z', detail: { version: 1 } },
@@ -138,7 +166,7 @@ describe('Demostración universitaria explícita', () => {
       notificacion: { estado: 'ENTREGADA_BUZON_DEMO', destinatario: 'ciudadano-demo@example.invalid', envio_real: false },
     }] });
     const user = await open();
-    expect(screen.getByText(/DEMO UNIVERSITARIA:/)).toBeTruthy();
+    expect(screen.queryByText(/DEMO UNIVERSITARIA:/)).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Auditar automáticamente (demostración)' }));
     await waitFor(() => expect(repository.validate).toHaveBeenCalledWith('id-prueba', 'TUPA-1', 1, {}));
     await waitFor(() => expect(disabled('Aprobar y Firmar (simulación)')).toBe(false));
