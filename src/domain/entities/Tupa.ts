@@ -1,6 +1,7 @@
 export interface Procedure {
   code: string;
   name: string;
+  department: string;
   requirements: { id: string; description: string; conditional: boolean }[];
 }
 export interface Catalog {
@@ -17,9 +18,51 @@ export interface Workflow {
   dossier_id: string;
   revision: number;
   procedure_code: string | null;
+  drafts?: Draft[];
+  audit?: AuditEntry[];
+  routing?: RoutingDecision;
   validation: {
     estado?: string;
     advertencia?: string;
+    habilitado_enrutamiento?: boolean;
+    alertas?: { codigo: string; requisito: string; mensaje: string; nota: string }[];
     requisitos?: { id: string; estado: RequirementCheck['estado']; nota: string; paginas_revisadas: number[]; paginas_candidatas: number[] }[];
+  };
+}
+
+export interface Draft {
+  version: number;
+  contenido: string;
+  autor: string;
+  origen: string;
+  tipo: string;
+  vigente: boolean;
+  estado: string;
+  firma: unknown | null;
+  sisgedoc: unknown | null;
+  notificacion: unknown | null;
+}
+export interface AuditEntry {
+  actor: string;
+  action: string;
+  at: string;
+  detail: { version?: number; version_anterior?: number; tipo?: string };
+}
+export interface RoutingDecision {
+  estado?: string;
+  destino?: string | null;
+  sugerencia?: string;
+  confianza?: number | null;
+  modelo?: string | null;
+  alerta?: boolean;
+  motivo?: string;
+  alcance?: string;
+}
+export interface WorkflowCapabilities {
+  integraciones?: {
+    firma_electronica: boolean;
+    sisgedoc: boolean;
+    notificaciones: boolean;
+    enrutamiento_predictivo: boolean;
   };
 }

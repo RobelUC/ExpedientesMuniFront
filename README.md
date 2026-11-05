@@ -2,6 +2,12 @@
 
 Se conserva React/TypeScript y la separación dominio → puertos → casos de uso → adaptadores. La composición real usa `ApiExpedienteAdapter`, `ApiAuthAdapter` y `ApiTupaAdapter`; los adaptadores de demostración siguen disponibles en el código y no se incluyen en la composición real. Se conservan estilos y estructura del portal.
 
+## Ampliación HU01–HU04
+
+La revisión ahora incorpora alertas de faltantes, editor de borradores, historial de versiones, auditoría y destino local con clasificación/asignación manual. Las escrituras usan los endpoints existentes y su revisión optimista; no se sobrescriben cambios concurrentes. El texto sin guardar se conserva ante errores y bloquea una validación simultánea; la recarga explícita descarta los cambios locales.
+
+El botón «Aprobar y Firmar» sigue deshabilitado sin firma, SISGEDOC y notificaciones. La sugerencia del TUPA no se presenta como predicción. No se generan probabilidades ni firmas simuladas. Evaluación por cada escenario, pruebas y dependencias pendientes: [informe PMV del backend](https://github.com/PGTEV/Back-End-TP/blob/codex/pmv-hu01-hu04/docs/PMV_HU01_HU04.md).
+
 ## Ejecutar y verificar
 
 Node 24 recomendado (`.nvmrc`); las herramientas de pruebas requieren Node 22.12+, 24 o 26+. Desde este repositorio:

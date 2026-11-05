@@ -1,5 +1,7 @@
 # Auditoría de integración y resultado
 
+La ampliación posterior del PMV HU01–HU04 está documentada en [el informe por escenarios](https://github.com/PGTEV/Back-End-TP/blob/codex/pmv-hu01-hu04/docs/PMV_HU01_HU04.md): 67 pruebas backend y 34 frontend aprobadas. Los resultados siguientes conservan el registro de la integración inicial.
+
 Repositorios correctos: `RobelUC/ExpedientesMuniFront` (base `c281dab43526a398107b65621b916876448f212d`) y `PGTEV/Back-End-TP` (base `881466515db6a30ff713e8902bb51828a8066480`). El repositorio de Andree250 indicado inicialmente por error no es la base de estos cambios del backend.
 
 ## Hallazgos y correcciones
