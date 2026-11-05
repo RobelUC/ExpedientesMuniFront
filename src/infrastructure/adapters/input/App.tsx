@@ -16,6 +16,8 @@ import { GetExpedienteUseCase } from '@application/useCases/GetExpedienteUseCase
 import { UploadExpedienteUseCase } from '@application/useCases/UploadExpedienteUseCase';
 import { ConfirmExpedienteUseCase } from '@application/useCases/ConfirmExpedienteUseCase';
 import { DownloadJsonUseCase } from '@application/useCases/DownloadJsonUseCase';
+import { CreateProtectedExportUseCase } from '@application/useCases/CreateProtectedExportUseCase';
+import { DownloadDocumentUseCase } from '@application/useCases/DownloadDocumentUseCase';
 import { LoginUseCase } from '@application/useCases/LoginUseCase';
 
 // Inicializar dependencias (DI Container simple)
@@ -27,6 +29,8 @@ const getExpedienteUseCase = new GetExpedienteUseCase(apiAdapter);
 const uploadExpedienteUseCase = new UploadExpedienteUseCase(apiAdapter);
 const confirmExpedienteUseCase = new ConfirmExpedienteUseCase(apiAdapter);
 const downloadJsonUseCase = new DownloadJsonUseCase();
+const protectedExport = new CreateProtectedExportUseCase();
+const downloadDocument = new DownloadDocumentUseCase(apiAdapter);
 const loginUseCase = new LoginUseCase(authAdapter);
 
 export default function App() {
@@ -89,7 +93,7 @@ export default function App() {
 
   const handleDownload = () => {
     if (!expediente) return;
-    downloadJsonUseCase.execute(expediente.id, expediente);
+    downloadJsonUseCase.execute(expediente.id, protectedExport.execute(expediente));
   };
 
   const handleQuery = async (event: React.FormEvent) => {
@@ -100,7 +104,7 @@ export default function App() {
       const result = await getExpedienteUseCase.execute(queryId.trim());
       if (!result) throw new Error('Expediente no encontrado.');
       setExpediente(result); setPdfFile(null);
-      setMessage('Expediente recuperado de la base de datos. El backend no expone una descarga del PDF original.');
+      setMessage('Expediente recuperado de la base de datos. Puede descargar los segmentos originales disponibles en el almacenamiento.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Error al consultar'); }
     finally { busy.current = false; setLoading(false); }
   };
@@ -167,13 +171,16 @@ export default function App() {
             {/* ── Main grid: Viewer + Extracted Data ── */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               <div className="lg:col-span-7 flex flex-col gap-4">
-                <DocumentViewer key={expediente.id} expediente={expediente} pdfUrl={pdfUrl} />
+                <DocumentViewer key={expediente.id} expediente={expediente} pdfUrl={pdfUrl}
+                  onDownloadSegment={index => downloadDocument.execute(expediente.id, index)} />
               </div>
               <div className="lg:col-span-5 flex flex-col gap-4">
                 <ExtractedDataPanel 
+                  key={expediente.id}
                   expediente={expediente} 
                   onSave={handleSave} 
                   onDownload={handleDownload} 
+                  onDownloadOriginal={() => downloadJsonUseCase.execute(expediente.id, expediente)}
                 />
                 <TupaPanel key={expediente.id} expediente={expediente} service={tupaUseCases} />
               </div>

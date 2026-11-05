@@ -36,6 +36,24 @@ describe('URL y contrato de estados', () => {
 });
 
 describe('HTTP', () => {
+  it('descarga el segmento por la ruta implementada con Bearer y sin token en la URL', async () => {
+    client.setToken('credencial-ficticia');
+    fetchMock.mockResolvedValue(new Response('%PDF-ficticio', { headers: { 'Content-Type': 'application/pdf' } }));
+    const adapter = new ApiExpedienteAdapter(client);
+    const blob = await adapter.getDocumentPdf('id', 2);
+    expect(await blob.text()).toBe('%PDF-ficticio');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://api.example/api/expedientes/id/documentos/2/pdf');
+    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get('Authorization')).toBe('Bearer credencial-ficticia');
+  });
+  it('no trata HTML como PDF y elimina la credencial si la descarga devuelve 401', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('<html>error</html>', { headers: { 'Content-Type': 'text/html' } }));
+    await expect(client.requestBlob('/segmento')).rejects.toThrow('PDF válido');
+    client.setToken('credencial-ficticia');
+    fetchMock.mockResolvedValueOnce(reply({}, 401)).mockResolvedValueOnce(reply({}));
+    await expect(client.requestBlob('/segmento')).rejects.toBeInstanceOf(ApiError);
+    await client.request('/capacidades');
+    expect(new Headers(fetchMock.mock.calls[2]?.[1]?.headers).has('Authorization')).toBe(false);
+  });
   it.each([{ detail: 'Texto del servidor' }, { detail: { mensaje: 'Texto del servidor' } }, { detail: [{ msg: 'Texto del servidor' }] }])('muestra los formatos de error de FastAPI', async body => {
     fetchMock.mockResolvedValue(reply(body, 422));
     await expect(client.request('/expedientes')).rejects.toThrow('Texto del servidor');

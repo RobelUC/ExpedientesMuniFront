@@ -119,7 +119,7 @@ export function TupaPanel({ expediente, service }: Props) {
     {actionMessage && <p role="status">{actionMessage}</p>}
     {flow?.validation.estado && <p>Resultado guardado: {flow.validation.estado} · revisión {flow.revision}</p>}
     {!!flow?.validation.alertas?.length && <div role="alert" className="p-3 rounded bg-error-container text-on-error-container">
-      <p className="font-bold">{capabilities?.demo ? 'Evidencias ficticias faltantes' : 'Requisitos faltantes confirmados'}</p>
+      <p className="font-bold">{capabilities?.demo ? 'Observaciones de la auditoría ficticia' : 'Requisitos faltantes o inconsistencias que requieren revisión'}</p>
       <ul>{flow.validation.alertas.map(alert => <li key={alert.requisito}>{alert.mensaje} {alert.nota}</li>)}</ul>
     </div>}
     {flow?.validation.advertencia && <p className="text-body-sm">{flow.validation.advertencia}</p>}

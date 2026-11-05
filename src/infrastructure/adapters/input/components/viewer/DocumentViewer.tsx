@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import type { Expediente } from '@domain/entities/Expediente';
 import { SegmentTabs } from './SegmentTabs';
 import { PageControls } from './PageControls';
@@ -7,9 +7,10 @@ import { DocumentPreview } from './DocumentPreview';
 export interface DocumentViewerProps {
   expediente: Expediente;
   pdfUrl?: string;
+  onDownloadSegment?: (index: number) => Promise<void>;
 }
 
-export function DocumentViewer({ expediente, pdfUrl }: DocumentViewerProps) {
+export function DocumentViewer({ expediente, pdfUrl, onDownloadSegment }: DocumentViewerProps) {
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
   const activeSection = expediente.sections[activeSectionIndex];
   
@@ -17,6 +18,16 @@ export function DocumentViewer({ expediente, pdfUrl }: DocumentViewerProps) {
   const initialPage = activeSection?.pageRange?.[0] || 1;
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [zoom, setZoom] = useState(100);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState('');
+  const downloadBusy = useRef(false);
+  const download = async () => {
+    if (!onDownloadSegment || activeSection?.documentIndex === undefined || downloadBusy.current) return;
+    downloadBusy.current = true; setDownloading(true); setDownloadError('');
+    try { await onDownloadSegment(activeSection.documentIndex); }
+    catch (err) { setDownloadError(err instanceof Error ? err.message : 'No se pudo descargar el segmento.'); }
+    finally { downloadBusy.current = false; setDownloading(false); }
+  };
 
   const handleSelectSection = (index: number) => {
     setActiveSectionIndex(index);
@@ -45,6 +56,13 @@ export function DocumentViewer({ expediente, pdfUrl }: DocumentViewerProps) {
         activeIndex={activeSectionIndex} 
         onSelect={handleSelectSection} 
       />
+      {onDownloadSegment && <>
+        <button disabled={downloading || activeSection?.documentIndex === undefined} onClick={download} className="bg-primary text-on-primary rounded-lg p-2 disabled:opacity-50">
+          {downloading ? 'Descargando segmento...' : `Descargar segmento original: ${activeSection?.title || ''}`}
+        </button>
+        <p className="text-body-sm text-on-surface-variant">Separación conservadora por página. Los PDFs originales contienen los datos originales; no están anonimizados.</p>
+        {downloadError && <p role="alert" className="bg-error-container text-on-error-container p-2 rounded">{downloadError}</p>}
+      </>}
       <PageControls 
         currentPage={currentPage} 
         totalPages={expediente.totalPages} 

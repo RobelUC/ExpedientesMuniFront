@@ -48,6 +48,10 @@ describe.skipIf(!available)('React adapters → FastAPI real en localhost', () =
     const dossier = await repository.uploadExpediente(file);
     expect(dossier.status).toBe('procesado');
     expect(dossier.sections[0]?.title).toBe('FUT');
+    expect(dossier.privacy?.transmision_externa_habilitada).toBe(false);
+    expect(dossier.sections[0]?.maskedFields?.some(field => field.value === '[DNI_1]')).toBe(true);
+    const segment = await repository.getDocumentPdf(dossier.id, 0);
+    expect((await segment.text()).startsWith('%PDF-')).toBe(true);
     await repository.saveExpediente(dossier);
     expect((await repository.getExpedienteById(dossier.id))?.sha256).toBe(dossier.sha256);
     const tupa = new ApiTupaAdapter(client);

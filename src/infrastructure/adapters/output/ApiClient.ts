@@ -31,6 +31,29 @@ export class ApiClient {
               private readonly production = import.meta.env.PROD) {}
   setToken(token: string) { this.token = token; }
 
+  async requestBlob(path: string, timeoutMs = 30000): Promise<Blob> {
+    const base = resolveApiUrl(this.configuredUrl, this.production);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const headers = new Headers();
+    if (this.token) headers.set('Authorization', `Bearer ${this.token}`);
+    try {
+      const response = await fetch(`${base}${path}`, { headers, signal: controller.signal, cache: 'no-store' });
+      if (!response.ok) {
+        const body: unknown = await response.json().catch(() => null);
+        if (response.status === 401) this.token = '';
+        throw new ApiError(errorMessage(body, response.status), response.status, body);
+      }
+      if (!response.headers.get('Content-Type')?.includes('application/pdf')) throw new Error('El servidor no devolvió un PDF válido.');
+      return await response.blob();
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      if (controller.signal.aborted) throw new Error('Se agotó el tiempo para descargar el segmento.');
+      if (error instanceof TypeError) throw new Error('No se pudo descargar el segmento. Revise conexión y CORS.');
+      throw error;
+    } finally { clearTimeout(timer); }
+  }
+
   async request<T>(path: string, options: RequestInit = {}, timeoutMs = 180000): Promise<T> {
     const base = resolveApiUrl(this.configuredUrl, this.production);
     const controller = new AbortController();

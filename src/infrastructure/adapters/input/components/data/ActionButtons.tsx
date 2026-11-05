@@ -20,7 +20,7 @@ export function ActionButtons({ onSave, onDownloadJson }: ActionButtonsProps) {
         className="flex-none inline-flex items-center justify-center gap-2 bg-surface hover:bg-surface-container text-primary border-2 border-primary/20 hover:border-primary/40 py-3 px-6 rounded-xl font-label-lg font-bold transition-all"
       >
         <span className="material-symbols-outlined text-[20px]">download</span>
-        <span>Exportar JSON</span>
+        <span>Exportar JSON protegido</span>
       </button>
     </div>
   );

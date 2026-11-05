@@ -1,3 +1,5 @@
+import type { CrossValidation, DataPrivacy } from '@domain/entities/Expediente';
+
 export interface DossierResponse {
   id: string;
   nombre_archivo: string;
@@ -5,6 +7,8 @@ export interface DossierResponse {
   estado: string;
   creado_en: string;
   error: string | null;
+  privacidad?: DataPrivacy;
+  consistencia?: CrossValidation;
   documentos: {
     tipo: string;
     paginas: number[];

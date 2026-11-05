@@ -15,9 +15,11 @@ export function mapDossier(data: DossierResponse): Expediente {
   return {
     id: data.id, sha256: data.sha256, fileName: data.nombre_archivo, fileSize: 'No informado',
     status, backendStatus: data.estado, error: data.error, processingTime: '',
+    privacy: data.privacidad, consistency: data.consistencia,
     totalPages: Math.max(0, ...data.documentos.flatMap(doc => doc.paginas)),
     sections: data.documentos.map((doc, index) => ({
       id: `${data.id}-sec-${index}`, title: doc.tipo,
+      documentIndex: index,
       subtitle: `${doc.metodo_extraccion} · confianza OCR ${(doc.confianza_ocr * 100).toFixed(1)}%${doc.requiere_revision ? ' · requiere revisión' : ''}`,
       pageRange: [Math.min(...doc.paginas), Math.max(...doc.paginas)],
       icon: ({ FUT: 'article', DNI: 'badge', PLANO: 'map' } as Record<string, string>)[doc.tipo] || 'description',
@@ -25,6 +27,11 @@ export function mapDossier(data: DossierResponse): Expediente {
         label: key.charAt(0).toUpperCase() + key.slice(1).replaceAll('_', ' '), value,
         isCode: key === 'dni' || key === 'ruc', isVerified: false,
       })),
+      maskedFields: data.privacidad?.documentos?.find(item => item.documento === index) ? Object.entries(
+        data.privacidad.documentos.find(item => item.documento === index)!.campos).map(([key, value]) => ({
+          label: key.charAt(0).toUpperCase() + key.slice(1).replaceAll('_', ' '), value,
+          isCode: key === 'dni' || key === 'ruc', isVerified: false,
+        })) : undefined,
     })),
   };
 }
@@ -54,6 +61,9 @@ export class ApiExpedienteAdapter implements ExpedienteRepositoryPort {
     }
   }
   async getPagePreview(): Promise<never> {
-    throw new Error('La API no expone el PDF original. Use el archivo cargado para previsualizarlo.');
+    throw new Error('La vista previa completa utiliza el archivo cargado. Los segmentos originales se descargan mediante getDocumentPdf.');
+  }
+  async getDocumentPdf(id: string, index: number): Promise<Blob> {
+    return this.client.requestBlob(`/expedientes/${encodeURIComponent(id)}/documentos/${index}/pdf`);
   }
 }

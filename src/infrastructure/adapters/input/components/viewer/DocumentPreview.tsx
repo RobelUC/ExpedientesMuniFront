@@ -5,7 +5,7 @@ export interface DocumentPreviewProps {
 }
 
 export function DocumentPreview({ pdfUrl, page, zoom }: DocumentPreviewProps) {
-  if (!pdfUrl) return <p className="my-auto text-on-surface-variant">El original solo está disponible durante la sesión de carga.</p>;
+  if (!pdfUrl) return <p className="my-auto text-on-surface-variant">La vista previa del PDF completo solo está disponible durante la sesión de carga. Puede descargar los segmentos originales del expediente.</p>;
   return (
     <div className="w-full flex flex-col gap-2">
       <iframe key={`${pdfUrl}-${page}-${zoom}`} title={`PDF original · página ${page}`}
