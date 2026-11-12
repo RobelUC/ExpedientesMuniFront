@@ -1,5 +1,17 @@
 # GobExpedientes AI — integración con FastAPI
 
+## Demostración universitaria local por roles
+
+Inicie el backend con `python -m scripts.run_academic_demo` desde su repositorio. El comando genera los PDF ficticios y muestra las credenciales efímeras de administrador, evaluadores y responsables.
+
+```powershell
+npm ci
+$env:VITE_API_URL = 'http://127.0.0.1:8000/api'
+npm run dev -- --host localhost
+```
+
+Abra `http://localhost:5173`. Use un alias de laboratorio y el token de la cuenta elegida. El servidor determina la identidad y los permisos. Para entregar un expediente al administrador o responsable, copie el ID que aparece en la revisión y consulte ese ID después de cambiar de cuenta. Las predicciones y los comprobantes de cierre se identifican como académicos.
+
 **Ingreso y cruce de anexos:** campos protegidos por defecto, vista original explícita, exportación protegida, alertas de DNI/RUC contradictorios y descarga de segmentos PDF reales. [Alcance, privacidad y pruebas](https://github.com/PGTEV/Back-End-TP/blob/codex/pmv-hu01-hu04/docs/PMV_INGRESO_PRIVACIDAD_AUDITORIA.md). Esta ampliación no necesita API key.
 
 **Modo universitario:** con ACADEMIC_DEMO=true en el backend, el portal ofrece ocho PDFs ficticios para descargar, auditoría automática de práctica, modelo sintético y emisión simulada. Las acciones y los comprobantes identifican las simulaciones, sin banners globales repetidos. [Guion y fuente TUPA verificada](https://github.com/PGTEV/Back-End-TP/blob/codex/pmv-hu01-hu04/docs/DEMO_UNIVERSITARIA.md). No requiere claves externas ni constituye una integración municipal real.

@@ -1,4 +1,4 @@
-import type { Catalog, RequirementCheck, Workflow, WorkflowCapabilities } from '@domain/entities/Tupa';
+import type { AcademicIndicators, Catalog, RequirementCheck, Workflow, WorkflowCapabilities } from '@domain/entities/Tupa';
 import type { TupaRepositoryPort } from '@domain/ports/TupaRepositoryPort';
 import { apiClient, type ApiClient } from './ApiClient';
 
@@ -7,6 +7,9 @@ export class ApiTupaAdapter implements TupaRepositoryPort {
   getCatalog() { return this.client.request<Catalog>('/tupa/procedimientos'); }
   getCapabilities() { return this.client.request<WorkflowCapabilities>('/capacidades'); }
   getWorkflow(id: string) { return this.client.request<Workflow>(`/expedientes/${encodeURIComponent(id)}/flujo`); }
+  getIndicators(id: string) {
+    return this.client.request<{ academico?: AcademicIndicators }>(`/expedientes/${encodeURIComponent(id)}/indicadores`);
+  }
   validate(id: string, code: string, revision: number, checks: Record<string, RequirementCheck>) {
     return this.client.request<Workflow>(`/expedientes/${encodeURIComponent(id)}/validacion`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },

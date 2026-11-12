@@ -1,18 +1,22 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { Expediente } from '@domain/entities/Expediente';
-import type { Catalog, RequirementCheck, Workflow, WorkflowCapabilities } from '@domain/entities/Tupa';
+import type { AcademicIndicators, Catalog, RequirementCheck, Workflow, WorkflowCapabilities } from '@domain/entities/Tupa';
 import type { TupaUseCases } from '@application/useCases/TupaUseCases';
+import type { AcademicIdentity } from '@domain/entities/User';
 import { WorkflowPanel } from './WorkflowPanel';
 
-interface Props { expediente: Expediente; service: TupaUseCases }
+interface Props { expediente: Expediente; service: TupaUseCases; academic?: AcademicIdentity }
 type CheckInput = Omit<RequirementCheck, 'paginas'> & { paginas: string };
 const emptyCheck: CheckInput = { estado: 'PENDIENTE', nota: '', paginas: '' };
 
-export function TupaPanel({ expediente, service }: Props) {
+export function TupaPanel({ expediente, service, academic }: Props) {
   const procedureId = useId();
+  const canReview = !academic || academic.actions.includes('evaluar');
   const [catalog, setCatalog] = useState<Catalog>();
   const [flow, setFlow] = useState<Workflow>();
   const [capabilities, setCapabilities] = useState<WorkflowCapabilities>();
+  const [academicIndicators, setAcademicIndicators] = useState<AcademicIndicators>();
+  const [indicatorsError, setIndicatorsError] = useState(false);
   const [code, setCode] = useState('');
   const [checks, setChecks] = useState<Record<string, CheckInput>>({});
   const [loading, setLoading] = useState(true);
@@ -40,6 +44,18 @@ export function TupaPanel({ expediente, service }: Props) {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [expediente.id, service]);
+
+  const showIndicators = Boolean(academic && capabilities?.predicciones_academicas && flow?.procedure_code && flow.demo);
+  useEffect(() => {
+    setAcademicIndicators(undefined);
+    setIndicatorsError(false);
+    if (!showIndicators) return;
+    let active = true;
+    service.getAcademicIndicators(expediente.id)
+      .then(result => { if (active) setAcademicIndicators(result); })
+      .catch(() => { if (active) setIndicatorsError(true); });
+    return () => { active = false; };
+  }, [expediente.id, flow?.revision, service, showIndicators]);
 
   const procedure = catalog?.procedimientos.find(p => p.code === code);
   const update = (id: string, patch: Partial<CheckInput>) => {
@@ -88,7 +104,7 @@ export function TupaPanel({ expediente, service }: Props) {
       {draftDirty && <p role="status" className="text-body-sm">Guarde el borrador o recargue la revisión antes de modificar la validación TUPA.</p>}
       <div className="flex flex-col gap-1">
         <label htmlFor={procedureId}>Procedimiento</label>
-        <select id={procedureId} value={code} disabled={loading || draftDirty} className="border border-outline-variant rounded p-2 bg-surface" onChange={e => { setCode(e.target.value); setChecks({}); setSaved(false); setDirty(true); setActionMessage(''); }}>
+        <select id={procedureId} value={code} disabled={!canReview || loading || draftDirty} className="border border-outline-variant rounded p-2 bg-surface" onChange={e => { setCode(e.target.value); setChecks({}); setSaved(false); setDirty(true); setActionMessage(''); }}>
           <option value="">Seleccione un procedimiento</option>
           {catalog.procedimientos.map(p => <option key={p.code} value={p.code}>{p.code} · {p.name}</option>)}
         </select>
@@ -97,7 +113,7 @@ export function TupaPanel({ expediente, service }: Props) {
       {procedure?.requirements.map(requirement => {
         const check = checks[requirement.id] || emptyCheck;
         const candidates = flow?.procedure_code === code ? flow.validation.requisitos?.find(r => r.id === requirement.id)?.paginas_candidatas : undefined;
-        return <fieldset key={requirement.id} disabled={loading || draftDirty} className="border-t border-surface-container py-2 flex flex-col gap-2">
+        return <fieldset key={requirement.id} disabled={!canReview || loading || draftDirty} className="border-t border-surface-container py-2 flex flex-col gap-2">
           <legend className="font-bold text-body-sm">{requirement.description}</legend>
           {!!candidates?.length && <p className="text-body-sm">Páginas candidatas OCR: {candidates.join(', ')}; requieren revisión humana.</p>}
           <label>Estado <select className="border rounded p-1 bg-surface" value={check.estado} onChange={e => update(requirement.id, { estado: e.target.value as RequirementCheck['estado'] })}>
@@ -112,13 +128,24 @@ export function TupaPanel({ expediente, service }: Props) {
           </label>
         </fieldset>;
       })}
-      {capabilities?.demo && <button disabled={loading || draftDirty || !code || expediente.status !== 'procesado' || !flow || flow.drafts?.at(-1)?.estado === 'EMITIDO_DEMO'} onClick={() => submit(true)} className="bg-primary text-on-primary rounded-xl p-3 font-bold disabled:opacity-50">Auditar automáticamente (demostración)</button>}
-      <button disabled={loading || draftDirty || !code || expediente.status !== 'procesado' || !flow || flow.drafts?.at(-1)?.estado === 'EMITIDO_DEMO'} onClick={() => submit(false)} className="bg-primary text-on-primary rounded-xl p-3 font-bold disabled:opacity-50">Guardar revisión TUPA</button>
+      {capabilities?.demo && canReview && <button disabled={!canReview || loading || draftDirty || !code || expediente.status !== 'procesado' || !flow || flow.drafts?.at(-1)?.estado === 'EMITIDO_DEMO'} onClick={() => submit(true)} className="bg-primary text-on-primary rounded-xl p-3 font-bold disabled:opacity-50">Auditar automáticamente (demostración)</button>}
+      <button disabled={!canReview || loading || draftDirty || !code || expediente.status !== 'procesado' || !flow || flow.drafts?.at(-1)?.estado === 'EMITIDO_DEMO'} onClick={() => submit(false)} className="bg-primary text-on-primary rounded-xl p-3 font-bold disabled:opacity-50">Guardar revisión TUPA</button>
     </>}
     <button disabled={loading} onClick={refresh} className="text-primary underline">Recargar catálogo y revisión guardada (descarta cambios locales)</button>
     {saved && <p role="status">Revisión guardada en el servidor.</p>}
     {actionMessage && <p role="status">{actionMessage}</p>}
     {flow?.validation.estado && <p>Resultado guardado: {flow.validation.estado} · revisión {flow.revision}</p>}
+    {showIndicators && <section aria-label="Predicciones académicas" className="border-t border-surface-container pt-3">
+      <h3 className="font-bold">Predicciones académicas · datos sintéticos</h3>
+      <p>Estimaciones didácticas sin validez administrativa. Toda decisión requiere revisión humana.</p>
+      {indicatorsError && <p role="status">Indicadores académicos temporalmente no disponibles.</p>}
+      {academicIndicators && <dl className="grid grid-cols-2 gap-2">
+        <dt>Tiempo estimado de atención</dt>
+        <dd>{academicIndicators.dias_estimados == null ? 'No disponible' : `${academicIndicators.dias_estimados} días hábiles`}</dd>
+        <dt>Riesgo académico de rechazo</dt>
+        <dd>{academicIndicators.probabilidad_rechazo == null ? 'No disponible' : `${(academicIndicators.probabilidad_rechazo * 100).toFixed(1)}%`}</dd>
+      </dl>}
+    </section>}
     {!!flow?.validation.alertas?.length && <div role="alert" className="p-3 rounded bg-error-container text-on-error-container">
       <p className="font-bold">{capabilities?.demo ? 'Observaciones de la auditoría ficticia' : 'Requisitos faltantes o inconsistencias que requieren revisión'}</p>
       <ul>{flow.validation.alertas.map(alert => <li key={alert.requisito}>{alert.mensaje} {alert.nota}</li>)}</ul>
@@ -132,7 +159,7 @@ export function TupaPanel({ expediente, service }: Props) {
       </li>)}</ul>
       <p className="text-body-sm">La categoría de un anexo no demuestra su contenido, firma, pago ni cumplimiento legal.</p>
     </details>}
-    {flow && <section className="border-t pt-3 flex flex-col gap-2" aria-label="Auditoría TUPA con Gemini">
+    {flow && !academic && <section className="border-t pt-3 flex flex-col gap-2" aria-label="Auditoría TUPA con Gemini">
       <h3 className="font-headline-sm text-primary font-bold">Auditoría TUPA con Gemini</h3>
       <button disabled={loading || dirty || draftDirty || !flow.validation.estado || !capabilities?.ia_generativa?.auditoria_tupa || flow.drafts?.at(-1)?.estado === 'EMITIDO_DEMO'}
         onClick={() => run(revision => service.auditWithAI(expediente.id, revision), 'Auditoría con Gemini guardada. Revise los hallazgos y las páginas candidatas.')}
@@ -152,7 +179,7 @@ export function TupaPanel({ expediente, service }: Props) {
         </li>)}</ul>
       </>}
     </section>}
-    {flow && catalog && <WorkflowPanel key={refreshToken} flow={flow} catalog={catalog} capabilities={capabilities} disabled={loading} validationDirty={dirty}
+    {flow && catalog && <WorkflowPanel key={refreshToken} flow={flow} catalog={catalog} capabilities={capabilities} academic={academic} disabled={loading} validationDirty={dirty}
       onDraftDirtyChange={setDraftDirty}
       onGenerateDraft={() => run(revision => service.generateDraft(expediente.id, revision), 'Borrador generado con IA y guardado. Revise su contenido antes de aprobarlo.')}
       onSaveDraft={content => run(revision => service.saveDraft(expediente.id, content, revision), 'Nueva versión guardada con auditoría.')}

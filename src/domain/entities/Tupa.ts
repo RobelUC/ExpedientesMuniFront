@@ -65,6 +65,7 @@ export interface AuditEntry {
   detail: { version?: number; version_anterior?: number; tipo?: string };
 }
 export interface RoutingDecision {
+  responsable_id?: string;
   simulado?: boolean;
   estado?: string;
   destino?: string | null;
@@ -76,6 +77,7 @@ export interface RoutingDecision {
   alcance?: string;
 }
 export interface WorkflowCapabilities {
+  predicciones_academicas?: boolean;
   ia_generativa?: { configurada: boolean; proveedor: string | null; modelo: string | null; auditoria_tupa?: boolean };
   demo?: boolean;
   simulaciones?: { habilitadas: boolean; firma_sisgedoc_notificacion: boolean; modelo_datos_sinteticos: boolean };
@@ -85,4 +87,13 @@ export interface WorkflowCapabilities {
     notificaciones: boolean;
     enrutamiento_predictivo: boolean;
   };
+}
+
+export interface AcademicIndicators {
+  origen: 'SINTETICO';
+  modelo: string;
+  revision_humana: boolean;
+  dias_estimados: number | null;
+  probabilidad_rechazo: number | null;
+  motivo?: string;
 }
