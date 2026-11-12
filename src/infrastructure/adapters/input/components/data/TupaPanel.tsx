@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { Expediente } from '@domain/entities/Expediente';
 import type { Catalog, RequirementCheck, Workflow, WorkflowCapabilities } from '@domain/entities/Tupa';
 import type { TupaUseCases } from '@application/useCases/TupaUseCases';
@@ -9,6 +9,7 @@ type CheckInput = Omit<RequirementCheck, 'paginas'> & { paginas: string };
 const emptyCheck: CheckInput = { estado: 'PENDIENTE', nota: '', paginas: '' };
 
 export function TupaPanel({ expediente, service }: Props) {
+  const procedureId = useId();
   const [catalog, setCatalog] = useState<Catalog>();
   const [flow, setFlow] = useState<Workflow>();
   const [capabilities, setCapabilities] = useState<WorkflowCapabilities>();
@@ -85,12 +86,13 @@ export function TupaPanel({ expediente, service }: Props) {
     {error && <p role="alert" className="text-on-error-container bg-error-container p-3 rounded">{error}</p>}
     {catalog && <>
       {draftDirty && <p role="status" className="text-body-sm">Guarde el borrador o recargue la revisión antes de modificar la validación TUPA.</p>}
-      <label className="flex flex-col gap-1">Procedimiento
-        <select value={code} disabled={loading || draftDirty} className="border border-outline-variant rounded p-2 bg-surface" onChange={e => { setCode(e.target.value); setChecks({}); setSaved(false); setDirty(true); setActionMessage(''); }}>
+      <div className="flex flex-col gap-1">
+        <label htmlFor={procedureId}>Procedimiento</label>
+        <select id={procedureId} value={code} disabled={loading || draftDirty} className="border border-outline-variant rounded p-2 bg-surface" onChange={e => { setCode(e.target.value); setChecks({}); setSaved(false); setDirty(true); setActionMessage(''); }}>
           <option value="">Seleccione un procedimiento</option>
           {catalog.procedimientos.map(p => <option key={p.code} value={p.code}>{p.code} · {p.name}</option>)}
         </select>
-      </label>
+      </div>
       {!!procedure?.pdf_pages?.length && <p className="text-body-sm">Fuente: TUPA Huancayo 2025, páginas del PDF {procedure.pdf_pages.join(', ')}.</p>}
       {procedure?.requirements.map(requirement => {
         const check = checks[requirement.id] || emptyCheck;

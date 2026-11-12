@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 
 export interface LoginScreenProps {
   onLogin: (user: string, pass: string) => Promise<void>;
 }
 
 export function LoginScreen({ onLogin }: LoginScreenProps) {
+  const usernameId = useId();
+  const passwordId = useId();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,7 +29,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center mb-6">
           <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-sm">
-            <span className="material-symbols-outlined text-on-primary text-[32px]">shield_person</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-on-primary text-[32px]">shield_person</span>
           </div>
         </div>
         <h2 className="mt-2 text-center font-display text-display text-primary tracking-tight">
@@ -43,14 +45,15 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
           <p className="text-body-sm text-on-surface-variant mb-4">Acceso de prototipo mediante credencial de evaluador. El token solo se conserva en memoria; el alias no cambia la identidad auditada por el servidor.</p>
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label className="block font-label-md text-label-md text-on-surface mb-1">
+              <label htmlFor={usernameId} className="block font-label-md text-label-md text-on-surface mb-1">
                 Nombre para mostrar
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <span className="material-symbols-outlined text-outline text-[20px]">person</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-outline text-[20px]">person</span>
                 </div>
                 <input
+                  id={usernameId}
                   type="text"
                   required
                   value={username}
@@ -63,14 +66,15 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             </div>
 
             <div>
-              <label className="block font-label-md text-label-md text-on-surface mb-1">
+              <label htmlFor={passwordId} className="block font-label-md text-label-md text-on-surface mb-1">
                 Token de evaluador
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <span className="material-symbols-outlined text-outline text-[20px]">lock</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-outline text-[20px]">lock</span>
                 </div>
                 <input
+                  id={passwordId}
                   type="password"
                   autoComplete="off"
                   required
@@ -83,8 +87,8 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             </div>
 
             {error && (
-              <div className="p-3 rounded-lg bg-error-container text-on-error-container font-body-sm text-body-sm flex items-start gap-2">
-                <span className="material-symbols-outlined text-[18px]">error</span>
+              <div role="alert" className="p-3 rounded-lg bg-error-container text-on-error-container font-body-sm text-body-sm flex items-start gap-2">
+                <span aria-hidden="true" className="material-symbols-outlined text-[18px]">error</span>
                 <span>{error}</span>
               </div>
             )}
@@ -92,16 +96,16 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg shadow-xs font-label-md text-label-md text-on-primary bg-primary hover:bg-primary-container focus:outline-none transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg shadow-xs font-label-md text-label-md text-on-primary bg-primary hover:bg-primary-container focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
-                  <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
+                  <span aria-hidden="true" className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
                   Ingresando...
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined text-[20px]">login</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-[20px]">login</span>
                   Ingresar al Portal
                 </>
               )}

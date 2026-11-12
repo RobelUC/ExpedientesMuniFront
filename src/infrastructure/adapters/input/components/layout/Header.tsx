@@ -37,7 +37,7 @@ export function Header({ user, onUpload }: HeaderProps) {
           onClick={() => fileInputRef.current?.click()}
           className="inline-flex items-center gap-1 bg-surface-container-high hover:bg-surface-container-highest text-on-surface px-3 py-1.5 rounded-lg text-label-md font-label-md transition-colors"
         >
-          <span className="material-symbols-outlined text-[18px]">upload_file</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-[18px]">upload_file</span>
           <span>Cargar nuevo expediente</span>
         </button>
         <div className="flex items-center gap-2 border-l border-outline-variant pl-4">
