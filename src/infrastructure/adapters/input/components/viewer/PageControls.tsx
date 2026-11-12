@@ -34,17 +34,19 @@ export function PageControls({
           <button
             className="p-1 rounded bg-white hover:bg-surface-container shadow-xs text-on-surface"
             title="Alejar"
+            aria-label="Alejar"
             onClick={onZoomOut}
           >
-            <span className="material-symbols-outlined text-[18px]">zoom_out</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px]">zoom_out</span>
           </button>
-          <span className="px-2 font-code-sm text-code-sm font-semibold">{zoom}%</span>
+          <span role="status" className="px-2 font-code-sm text-code-sm font-semibold">{zoom}%</span>
           <button
             className="p-1 rounded bg-white hover:bg-surface-container shadow-xs text-on-surface"
             title="Acercar"
+            aria-label="Acercar"
             onClick={onZoomIn}
           >
-            <span className="material-symbols-outlined text-[18px]">zoom_in</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px]">zoom_in</span>
           </button>
         </div>
       </div>
@@ -59,9 +61,9 @@ export function PageControls({
           disabled={currentPage <= 1}
           className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white shadow-xs hover:bg-surface-container text-on-surface font-label-md text-label-md border border-surface-container"
         >
-          <span className="material-symbols-outlined text-[16px]">chevron_left</span> Anterior
+          <span aria-hidden="true" className="material-symbols-outlined text-[16px]">chevron_left</span> Anterior
         </button>
-        <span className="font-label-md text-label-md text-on-surface font-semibold">
+        <span role="status" className="font-label-md text-label-md text-on-surface font-semibold">
           Página {currentPage} de {totalPages}
         </span>
         <button
@@ -69,7 +71,7 @@ export function PageControls({
           disabled={currentPage >= totalPages}
           className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white shadow-xs hover:bg-surface-container text-on-surface font-label-md text-label-md border border-surface-container"
         >
-          Siguiente <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+          Siguiente <span aria-hidden="true" className="material-symbols-outlined text-[16px]">chevron_right</span>
         </button>
       </div>
     </div>

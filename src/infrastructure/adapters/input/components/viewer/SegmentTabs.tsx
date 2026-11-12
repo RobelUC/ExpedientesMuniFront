@@ -16,6 +16,7 @@ export function SegmentTabs({ sections, activeIndex, onSelect }: SegmentTabsProp
           <button
             key={section.id}
             onClick={() => onSelect(index)}
+            aria-pressed={isActive}
             className={`flex-1 min-w-[100px] flex flex-col items-center justify-center p-3 rounded-xl transition-all border ${
               isActive
                 ? 'bg-primary text-on-primary border-primary shadow-sm'
@@ -23,7 +24,7 @@ export function SegmentTabs({ sections, activeIndex, onSelect }: SegmentTabsProp
             }`}
           >
             <div className="flex items-center gap-1.5 mb-1">
-              <span className="material-symbols-outlined text-[20px] opacity-90">{section.icon}</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[20px] opacity-90">{section.icon}</span>
               <span className="font-label-lg font-bold tracking-wide">{section.title}</span>
             </div>
             <span className={isActive ? 'text-label-sm font-label-sm opacity-80' : 'text-label-sm font-label-sm text-on-surface-variant'}>
