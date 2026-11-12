@@ -6,6 +6,7 @@ export class TupaUseCases {
   getCatalog() { return this.repository.getCatalog(); }
   getCapabilities() { return this.repository.getCapabilities(); }
   getWorkflow(id: string) { return this.repository.getWorkflow(id); }
+  async getAcademicIndicators(id: string) { return (await this.repository.getIndicators?.(id))?.academico; }
   validate(id: string, code: string, revision: number, checks: Record<string, RequirementCheck>) {
     if (!code) throw new Error('Seleccione un procedimiento TUPA.');
     for (const check of Object.values(checks)) {

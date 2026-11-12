@@ -26,20 +26,22 @@ export function Header({ user, onUpload }: HeaderProps) {
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          style={{ display: 'none' }} 
-          accept="application/pdf"
-          onChange={handleFileChange} 
-        />
-        <button 
-          onClick={() => fileInputRef.current?.click()}
-          className="inline-flex items-center gap-1 bg-surface-container-high hover:bg-surface-container-highest text-on-surface px-3 py-1.5 rounded-lg text-label-md font-label-md transition-colors"
-        >
-          <span aria-hidden="true" className="material-symbols-outlined text-[18px]">upload_file</span>
-          <span>Cargar nuevo expediente</span>
-        </button>
+        {onUpload && <>
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            accept="application/pdf"
+            onChange={handleFileChange}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-1 bg-surface-container-high hover:bg-surface-container-highest text-on-surface px-3 py-1.5 rounded-lg text-label-md font-label-md transition-colors"
+          >
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px]">upload_file</span>
+            <span>Cargar nuevo expediente</span>
+          </button>
+        </>}
         <div className="flex items-center gap-2 border-l border-outline-variant pl-4">
           <div className="flex flex-col items-end">
             <span className="font-label-md text-label-md text-on-surface font-semibold">{user.name}</span>

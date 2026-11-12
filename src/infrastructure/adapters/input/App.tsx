@@ -112,13 +112,17 @@ export default function App() {
   if (!user) {
     return <LoginScreen onLogin={handleLogin} />;
   }
+  const canUpload = !user.academic || user.academic.actions.includes('cargar');
 
   return (
-    <AppLayout user={user} onUpload={handleUpload}>
+    <AppLayout user={user} onUpload={canUpload ? handleUpload : undefined}>
       <button className="text-primary underline mt-2" onClick={async () => {
-        await authAdapter.logout(); setUser(null); setExpediente(null); setPdfFile(null); setError(null); setMessage(null);
+        await authAdapter.logout(); setUser(null); setExpediente(null); setPdfFile(null); setError(null); setMessage(null); setQueryId('');
       }} disabled={loading}>Cerrar sesión</button>
       {user.demo && <a href="/ejemplos-demo.zip" download className="block text-primary underline mt-3">Descargar paquete de expedientes ficticios (ZIP)</a>}
+      {user.academic && <p className="text-body-sm mt-2">
+        Demostración académica · {user.role}{user.academic.department ? ` · ${user.academic.department}` : ''} · Sin validez administrativa
+      </p>}
       <div className="flex flex-col w-full gap-4 pt-4">
         {/* ── Page heading ── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pb-2 border-b border-surface-container-high">
@@ -136,6 +140,7 @@ export default function App() {
                 <span className="w-2 h-2 rounded-full bg-on-tertiary-container" />
                 {expediente.status === 'procesado' ? `Procesado en ${expediente.processingTime || 'tiempo no informado'}` : expediente.backendStatus}
               </span>
+              {user.academic && <span className="break-all text-body-sm">ID para consulta: {expediente.id}</span>}
             </div>
           )}
         </div>
@@ -156,7 +161,8 @@ export default function App() {
 
         {!expediente && !loading && !error && (
           <div className="p-8 text-center text-on-surface-variant bg-surface-container-lowest border border-dashed border-outline-variant rounded-xl mt-4">
-            No hay ningún expediente cargado. Usa el botón "Cargar nuevo expediente" para comenzar.
+            {canUpload ? 'No hay ningún expediente cargado. Usa el botón "Cargar nuevo expediente" para comenzar.'
+              : 'Consulta un expediente académico autorizado mediante su ID.'}
           </div>
         )}
 
@@ -179,7 +185,7 @@ export default function App() {
                   onDownload={handleDownload} 
                   onDownloadOriginal={() => downloadJsonUseCase.execute(expediente.id, expediente)}
                 />
-                <TupaPanel key={expediente.id} expediente={expediente} service={tupaUseCases} />
+                <TupaPanel key={expediente.id} expediente={expediente} service={tupaUseCases} academic={user.academic} />
               </div>
             </div>
           </>
