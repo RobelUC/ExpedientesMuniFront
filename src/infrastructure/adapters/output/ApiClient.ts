@@ -19,6 +19,7 @@ function errorMessage(body: unknown, status: number): string {
   if (typeof detail === 'string') return detail;
   if (detail && typeof detail === 'object' && 'mensaje' in detail && typeof detail.mensaje === 'string') return detail.mensaje;
   if (Array.isArray(detail)) return detail.map(item => typeof item?.msg === 'string' ? item.msg : 'Entrada inválida').join('; ');
+  if (status === 429) return 'Demasiados intentos o solicitudes. Espere un momento antes de volver a intentar.';
   if (status === 401) return 'La credencial no es válida o ha expirado. Vuelva a ingresar.';
   if (status === 413) return 'El PDF supera el tamaño permitido por el servidor.';
   if (status === 502 || status === 504) return 'El servidor no respondió a tiempo. Consulte el expediente antes de reenviarlo.';

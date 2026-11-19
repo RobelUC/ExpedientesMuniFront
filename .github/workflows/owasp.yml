@@ -1,0 +1,51 @@
+name: OWASP frontend and HTTP contract
+on:
+  pull_request:
+  push:
+    branches: [main, codex/aplicar-plan-owasp]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: frontend
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: PGTEV/Back-End-TP
+          # Publish backend first; this companion checkout follows its default branch.
+          path: backend
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - working-directory: backend
+        run: |
+          python -m venv .venv
+          if test -f requirements-runtime-linux.lock.txt; then
+            .venv/bin/pip install --require-hashes -r requirements-runtime-linux.lock.txt
+          else
+            .venv/bin/pip install -r requirements.lock.txt
+          fi
+      - working-directory: frontend
+        run: npm ci --ignore-scripts
+      - working-directory: frontend
+        env:
+          BACKEND_ROOT: ../backend
+        run: npm test
+      - working-directory: frontend
+        run: npm run lint && npm run build
+      - working-directory: frontend
+        run: npm audit --audit-level=high
+      - working-directory: frontend
+        run: python scripts/scan_repository.py
+      - working-directory: frontend
+        run: python scripts/verify_assets.py

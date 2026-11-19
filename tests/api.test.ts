@@ -150,3 +150,28 @@ describe('TUPA', () => {
     expect(() => service.validate('id', 'TUPA', 0, { identidad: { ...checks.identidad, nota: '' } })).toThrow('nota');
   });
 });
+
+
+describe('controles OWASP compatibles', () => {
+  it('explica 429 sin borrar el token ni repetir la solicitud', async () => {
+    client.setToken('token-ficticio');
+    fetchMock.mockResolvedValueOnce(reply({}, 429)).mockResolvedValueOnce(reply({}));
+    await expect(client.request('/expedientes')).rejects.toThrow('Espere un momento');
+    await client.request('/tupa/procedimientos');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(new Headers(fetchMock.mock.calls[1]?.[1]?.headers).get('Authorization')).toBe('Bearer token-ficticio');
+  });
+  it('acepta cuentas individuales sin activar simulaciones académicas', async () => {
+    fetchMock.mockResolvedValueOnce(reply({ demo: false, seguridad: {
+      expedientes_protegidos: true, cuentas_individuales: true,
+    } })).mockResolvedValueOnce(reply({ id: 'evaluador-uno', rol: 'evaluador', area: null,
+      acciones: ['consultar', 'cargar'], areas_asignables: [],
+    }));
+    const user = await new ApiAuthAdapter(client).login('Alias', 'token-ficticio');
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('https://api.example/api/sesion');
+    expect(user.demo).toBe(false);
+    expect(user.name).toBe('evaluador-uno');
+    expect(user.academic?.actions).toContain('cargar');
+    expect(user.role).not.toContain('demostración');
+  });
+});

@@ -81,3 +81,11 @@ La revisión incluye **Analizar requisitos con Gemini**, disponible tras guardar
 También se admite Gemini: el botón y el modelo mostrado cambian según `/api/capacidades`. Configurar AI_PROVIDER=gemini, GEMINI_ENABLED=true, GEMINI_API_KEY y GEMINI_MODEL exclusivamente en Render; ver `docs/GEMINI.md` del backend. Se conserva el endpoint autenticado de generación y el soporte OpenAI. El botón explica bloqueos por cambios sin guardar o por emisión previa del expediente.
 
 La revisión técnica incluye **Generar borrador con GPT**, habilitado cuando el backend anuncia `ia_generativa.configurada=true`. Genera una versión con procedencia OpenAI y permite revisarla/editarla con el historial existente. No sobrescribe cambios locales sin guardar. Configurar OPENAI_ENABLED, OPENAI_API_KEY y OPENAI_MODEL exclusivamente en Render según `docs/OPENAI.md` del backend; nunca usar una variable VITE para secretos. Desplegar primero el backend que implementa `POST /api/expedientes/{id}/borradores/ia`.
+
+## Aplicación del plan OWASP (paso 7)
+
+Ver [cambios y activación](docs/IMPLEMENTACION_OWASP.md). Crear `.env.local` desde
+`.env.example`; `.env` y `tsconfig.tsbuildinfo` ya no se versionan. Se mantienen las
+fuentes e iconos mediante archivos locales con licencias. Vercel añade cabeceras
+y CSP en modo solo informe; ajustar el origen de API en `connect-src` si cambia.
+El backend debe desplegarse primero para utilizar cuentas individuales opcionales.

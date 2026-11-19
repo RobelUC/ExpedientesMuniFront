@@ -20,7 +20,7 @@ export class ApiAuthAdapter implements AuthRepositoryPort {
   constructor(private readonly client: ApiClient = apiClient) {}
   async login(username: string, token: string): Promise<User> {
     this.client.setToken('');
-    let capabilities: { demo?: boolean; seguridad?: { expedientes_protegidos: boolean; roles_academicos?: boolean } };
+    let capabilities: { demo?: boolean; seguridad?: { expedientes_protegidos: boolean; roles_academicos?: boolean; cuentas_individuales?: boolean } };
     try { capabilities = await this.client.request('/capacidades'); }
     catch (error) {
       if (error instanceof ApiError && error.status === 404) throw new Error('El servidor no ofrece el contrato compatible. Solicite al administrador revisar la aplicación desplegada.');
@@ -31,10 +31,10 @@ export class ApiAuthAdapter implements AuthRepositoryPort {
     }
     this.client.setToken(token.trim());
     try {
-      if (capabilities.demo && capabilities.seguridad.roles_academicos) {
-        const session = await this.client.request<AcademicSession>('/academico/sesion');
+      if ((capabilities.demo && capabilities.seguridad.roles_academicos) || capabilities.seguridad.cuentas_individuales) {
+        const session = await this.client.request<AcademicSession>(capabilities.demo ? '/academico/sesion' : '/sesion');
         if (session.rol) {
-          return { name: session.id, demo: true, role: roleNames[session.rol],
+          return { name: session.id, demo: capabilities.demo === true, role: capabilities.demo ? roleNames[session.rol] : roleNames[session.rol].replace(' de demostración', ''),
             academic: { id: session.id, role: session.rol, department: session.area,
               actions: session.acciones, assignableAreas: session.areas_asignables } };
         }
