@@ -121,7 +121,7 @@ export default function App() {
       }} disabled={loading}>Cerrar sesión</button>
       {user.demo && <a href="/ejemplos-demo.zip" download className="block text-primary underline mt-3">Descargar paquete de expedientes ficticios (ZIP)</a>}
       {user.academic && <p className="text-body-sm mt-2">
-        Demostración académica · {user.role}{user.academic.department ? ` · ${user.academic.department}` : ''} · Sin validez administrativa
+        {user.demo ? 'Demostración académica' : 'Acceso individual'} · {user.role}{user.academic.department ? ` · ${user.academic.department}` : ''}{user.demo ? ' · Sin validez administrativa' : ''}
       </p>}
       <div className="flex flex-col w-full gap-4 pt-4">
         {/* ── Page heading ── */}
